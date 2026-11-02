@@ -97,6 +97,24 @@ input:focus,select:focus{border-color:var(--teal)}
 .budget .sep{color:var(--muted)}
 .budget .btns{margin-left:auto}
 .vt input.amt.own{border-color:var(--teal);background:var(--teal-soft)}
+.livecard{margin-top:14px;border-radius:16px;padding:18px;background:linear-gradient(135deg,#1f2430 0%,#22313a 100%);color:#fff;box-shadow:0 6px 20px rgba(16,24,40,.18)}
+.livecard .lh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.livecard .tag{display:inline-flex;align-items:center;gap:6px;background:rgba(220,38,38,.18);color:#fecaca;font-size:.66rem;font-weight:800;letter-spacing:1.5px;padding:4px 9px;border-radius:999px}
+.livecard .tag i{width:7px;height:7px;border-radius:50%;background:#ef4444;animation:pulse 1.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.7)}70%{box-shadow:0 0 0 7px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+.livecard .src{font-size:.7rem;color:#9aa5a0;margin-left:auto}
+.livecard .bigx{display:flex;align-items:baseline;gap:10px;margin:10px 0 14px;flex-wrap:wrap}
+.livecard .bigx b{font-size:2.6rem;font-weight:800;color:var(--teal);line-height:1}
+.livecard .bigx span{font-size:.8rem;color:#cbd5d1}
+.livecard .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+@media(max-width:800px){.livecard .tiles{grid-template-columns:repeat(2,1fr)}}
+.livecard .t{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px 12px}
+.livecard .t .l{font-size:.6rem;letter-spacing:1.2px;text-transform:uppercase;color:#9aa5a0;font-weight:700}
+.livecard .t .v{font-size:1.15rem;font-weight:800;margin-top:4px}
+.livecard .t .s{font-size:.68rem;color:#cbd5d1;margin-top:2px}
+.livecard .t.hot{background:rgba(31,164,99,.18);border-color:rgba(31,164,99,.5)}
+.livecard .t.hot .v{color:#5ee0a0}
+.livecard.none{background:#fff;color:var(--muted);border:1px dashed var(--line);box-shadow:none;font-size:.8rem;padding:12px 16px}
 .qw{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:.76rem;line-height:1.5;background:var(--teal-soft);color:#0e5566;border:1px solid #c9edf3}
 .qw.bad{background:#fef2f2;color:#991b1b;border-color:#fecaca}
 .pickhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px}
@@ -237,6 +255,8 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
         <div class="kpis" id="kpis"></div>
         <div id="qibWarn"></div>
       </div>
+
+      <div id="liveCard"></div>
 
       <div class="card">
         <h2>SEBI allotment working (ICDR 2018, Schedule XIV)</h2>
@@ -448,13 +468,26 @@ function renderCalc(){
   const rows=xs().map(x=>allot(a,x));
   $('#xCount').value=rows.length;
   const live=n(ipo.subs)>0?allot(a,ipo.subs):null;
-  const max=Math.max(1,...rows.map(r=>Math.abs(r.profit)),live?Math.abs(live.profit):0);
-  const tr=(r,i,isLive)=>`<tr${isLive?' class="cur"':''}><td>${isLive?num(r.x,2)+'x (live)':`<b>${num(r.x,2)}x</b>`}</td>
+  // live subscription gets its own snapshot card instead of a table row
+  const lv=liveOf(ipo), fromLive=lv&&!(ipo.edited||[]).includes('subs');
+  $('#liveCard').innerHTML=!live?`<div class="livecard none">Live QIB subscription not available yet — it fills in from ipopremium once QIBs start bidding (or type it in IPO details).</div>`:
+    `<div class="livecard"><div class="lh"><span class="tag"><i></i>LIVE</span><b style="font-size:.9rem">Your allotment at today's QIB subscription</b>
+      <span class="src">${fromLive?'ipopremium · '+$('#stamp').textContent.replace(/^.*updated /,'updated '):'your entry'}</span></div>
+      <div class="bigx"><b>${num(live.x,2)}x</b><span>QIB subscribed · allotment ratio ${pct(live.ratio)} · ${num(live.raw,2)} shares proportionate → ${rdesc(a)}</span></div>
+      <div class="tiles">
+        <div class="t hot"><div class="l">You get</div><div class="v">${num(live.sh)} sh</div><div class="s">${num(live.lots,2)} lots${live.lottery?` · ${num(live.lottery*100,1)}% lottery`:''}</div></div>
+        <div class="t hot"><div class="l">Expected profit</div><div class="v">${inr(live.profit)}</div><div class="s">@ GMP ₹${num(a.gmp,2)}</div></div>
+        <div class="t hot"><div class="l">Yield on blocked</div><div class="v">${num(live.roi,2)}%</div><div class="s">annualised ${num(live.roi*365/blockedDays(ipo),1)}%</div></div>
+        <div class="t"><div class="l">Allotted value</div><div class="v">${inr(live.amt)}</div><div class="s">of ${inr(a.applied)} blocked</div></div>
+        <div class="t"><div class="l">Refund / unblock</div><div class="v">${inr(live.refund)}</div><div class="s">on ${dt(ipo.allot)}</div></div>
+      </div></div>`;
+  const max=Math.max(1,...rows.map(r=>Math.abs(r.profit)));
+  const tr=(r,i)=>`<tr><td><b>${num(r.x,2)}x</b></td>
     <td>${pct(r.ratio)}</td><td>${num(r.raw,2)}</td>
     <td><b>${num(r.sh)}</b>${r.lottery?`<div class="lot">draw of lots: ${num(r.lottery*100,1)}% chance of 1 lot (≈ ${inr(r.lottery*a.lot*a.gmp)} expected)</div>`:''}</td><td><b>${num(r.lots,2)}</b></td><td>${inr(r.amt)}</td><td>${inr(r.refund)}</td>
     <td><div class="bar"><i style="width:${Math.round(Math.abs(r.profit)/max*90)}px"></i><span class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</span></div></td>
     <td>${num(r.roi,2)}%</td></tr>`;
-  $('#ptbl').innerHTML=`<thead><tr><th>Subscription</th><th>Allotment ratio</th><th>Proportionate shares</th><th>Final shares</th><th>Final lots</th><th>Allotted value</th><th>Refund</th><th>Profit @ GMP</th><th>Return on applied</th></tr></thead><tbody>${live?tr(live,-1,true):''}${rows.map((r,i)=>tr(r,i)).join('')}</tbody>`;
+  $('#ptbl').innerHTML=`<thead><tr><th>Subscription</th><th>Allotment ratio</th><th>Proportionate shares</th><th>Final shares</th><th>Final lots</th><th>Allotted value</th><th>Refund</th><th>Profit @ GMP</th><th>Return on applied</th></tr></thead><tbody>${rows.map((r,i)=>tr(r,i)).join('')}</tbody>`;
   $('#tNote').textContent=`Applied ${num(a.shares)} shares (${num(a.lots)} lots) for ${inr(a.applied)}. Allotment ratio = (1 − ${num(a.r*100,2)}% MF reserve) ÷ (x − ${num(a.r*100,2)}%). Proportionate shares = shares applied × ratio, then ${rdesc(a)}. Profit = final shares × GMP. Change the x levels in Table settings.`;
   renderWorking(ipo,a,live||rows[0]);
   $$('#roundT button').forEach(b=>b.classList.toggle('active',b.dataset.r===S.round));
@@ -613,21 +646,38 @@ function ipoPdf(){
   kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Profit if fully allotted',rs(a.maxProfit),'at 1x or below',true);
   const live=n(ipo.subs)>0?allot(a,ipo.subs):null;
   kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Live QIB subscription',live?num(live.x,2)+'x':'-',live?'profit ~ '+rs(live.profit):'not entered');
-  y+=bh+9;
+  y+=bh+5;
+  // live subscription snapshot band (kept out of the table)
+  if(live){
+    const bhh=27;
+    doc.setFillColor(...C.ink);doc.roundedRect(14,y,W-28,bhh,3,3,'F');
+    doc.setFillColor(220,38,38);doc.circle(19,y+6,1.3,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(254,202,202);doc.text('LIVE',22,y+7);
+    doc.setTextColor(203,213,209);doc.setFont('helvetica','normal');doc.text('QIB subscription',30,y+7);
+    doc.setFont('helvetica','bold');doc.setFontSize(22);doc.setTextColor(...C.teal);doc.text(num(live.x,2)+'x',18,y+20);
+    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(203,213,209);doc.text(`ratio ${pct(live.ratio)}`,18,y+24.5);
+    const tiles=[['YOU GET',`${num(live.sh)} sh`,`${num(live.lots,2)} lots`],['EXPECTED PROFIT',rs(live.profit),`@ GMP Rs. ${num(a.gmp,2)}`],['YIELD ON BLOCKED',num(live.roi,2)+'%','on '+rs(a.applied)],['REFUND / UNBLOCK',rs(live.refund),'allotted '+rs(live.amt)]];
+    const tx=58, tw=(W-14-4-tx-9)/4;
+    tiles.forEach((t,i)=>{const x0=tx+i*(tw+3);
+      doc.setFillColor(...(i<3?[29,64,52]:[47,54,68]));doc.roundedRect(x0,y+4,tw,bhh-8,2,2,'F');
+      doc.setFont('helvetica','bold');doc.setFontSize(5.8);doc.setTextColor(154,165,160);doc.text(t[0],x0+3,y+9);
+      doc.setFontSize(12);doc.setTextColor(...(i<3?[94,224,160]:[255,255,255]));doc.text(t[1],x0+3,y+16);
+      doc.setFont('helvetica','normal');doc.setFontSize(6.3);doc.setTextColor(203,213,209);doc.text(t[2],x0+3,y+20.5)});
+    y+=bhh+7;
+  } else y+=4;
   doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
   doc.text(`Expected profit at X subscription  (upper band Rs. ${num(a.price,2)}, GMP Rs. ${num(a.gmp,2)})`,14,y);
   y+=2;
-  const rows=xs().map(x=>allot(a,x)); const all=live?[live,...rows]:rows;
+  const rows=xs().map(x=>allot(a,x)); const all=rows;
   const max=Math.max(1,...all.map(r=>Math.abs(r.profit)));
   doc.autoTable({startY:y+1,margin:{left:14,right:14},theme:'plain',
     head:[['Subscription','Allot ratio','Proportionate','Final shares','Final lots','Allotted value','Refund','Profit @ GMP','Return','']],
-    body:all.map((r,i)=>[(live&&i===0)?num(r.x,2)+'x (live)':num(r.x,2)+'x',pct(r.ratio),num(r.raw,2),num(r.sh)+(r.lottery?' *':''),num(r.lots,2),rs(r.amt),rs(r.refund),rs(r.profit),num(r.roi,2)+'%','']),
+    body:all.map(r=>[num(r.x,2)+'x',pct(r.ratio),num(r.raw,2),num(r.sh)+(r.lottery?' *':''),num(r.lots,2),rs(r.amt),rs(r.refund),rs(r.profit),num(r.roi,2)+'%','']),
     headStyles:{fillColor:C.ink,textColor:255,fontStyle:'bold',fontSize:7,halign:'right'},
     styles:{fontSize:7.6,cellPadding:{top:2,bottom:2,left:1.8,right:1.8},halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
     columnStyles:{0:{halign:'left',fontStyle:'bold'},3:{fontStyle:'bold'},4:{fontStyle:'bold'},7:{fontStyle:'bold',textColor:C.gd},9:{cellWidth:20}},
     alternateRowStyles:{fillColor:[250,252,251]},
     didParseCell:d=>{if(d.section==='head'&&d.column.index===0)d.cell.styles.halign='left';
-      if(d.section==='body'&&live&&d.row.index===0)d.cell.styles.fillColor=C.amber;
       if(d.section==='body'&&d.column.index===7&&all[d.row.index].profit<0)d.cell.styles.textColor=[220,38,38];},
     didDrawCell:d=>{if(d.section==='body'&&d.column.index===9){const r=all[d.row.index];const w=Math.abs(r.profit)/max*(d.cell.width-4);
       doc.setFillColor(...(r.profit<0?[220,38,38]:C.green));doc.roundedRect(d.cell.x+2,d.cell.y+d.cell.height/2-1.6,Math.max(w,0.6),3.2,1.2,1.2,'F');}}
