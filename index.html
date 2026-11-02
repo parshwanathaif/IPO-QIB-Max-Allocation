@@ -73,6 +73,13 @@ input:focus,select:focus{border-color:var(--teal)}
 .tbl td:first-child{text-align:left}
 .tbl tr:nth-child(even) td{background:#fafcfb}
 .tbl tr.cur td{background:#fff7e6!important;font-weight:700}
+.steps{counter-reset:s;display:grid;gap:8px}
+.step{display:grid;grid-template-columns:26px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:9px 12px;background:#fbfdfc;font-size:.8rem}
+.step:before{counter-increment:s;content:counter(s);width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:.72rem;font-weight:700}
+.step small{display:block;color:var(--muted);font-size:.7rem;margin-top:2px}
+.step b.r{font-size:.95rem;white-space:nowrap}
+.step.fin{background:var(--green-soft);border-color:#bfe6cf}.step.fin:before{background:var(--green)}
+.lot{font-size:.62rem;color:var(--amber);font-weight:700}
 .tbl input.x{width:70px;padding:5px 7px;font-weight:700;text-align:right}
 .profit{font-weight:800;color:var(--green-dark)}
 .neg{color:var(--red)}
@@ -148,7 +155,11 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
           <div class="f"><label>GMP (₹ per share)</label><input data-k="gmp" type="number" step="any"><div class="hint" id="liveGmp"></div></div>
           <div class="f"><label>QIB subscription now (x)</label><input data-k="subs" type="number" step="any"></div>
         </div>
-        <div class="f"><label>QIB portion (₹ Cr) — optional cap</label><input data-k="qibCr" type="number" step="any"><div class="hint">If entered, application is capped at the QIB portion size.</div></div>
+        <div class="row2">
+          <div class="f"><label>Net QIB portion (₹ Cr, excl. anchor)</label><input data-k="qibCr" type="number" step="any"></div>
+          <div class="f"><label>MF bids in QIB (₹ Cr)</label><input data-k="mfCr" type="number" step="any"></div>
+        </div>
+        <div class="hint" style="margin:-4px 0 10px">Net QIB caps your bid. With MF bids we use the exact 5% MF reserve take-up; left blank, MFs are assumed to fill the full 5% reserve (usual case).</div>
         <div class="row2">
           <div class="f"><label>Open</label><input data-k="open" type="date"></div>
           <div class="f"><label>Close</label><input data-k="close" type="date"></div>
@@ -167,11 +178,11 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
         </div>
         <label>Allotment rounding</label>
         <div class="toggle" id="roundT">
-          <button data-r="exact">Exact shares</button>
+          <button data-r="auto">SEBI / registrar</button>
           <button data-r="nearest">Nearest lot</button>
-          <button data-r="down">Lot (floor)</button>
+          <button data-r="exact">Floor shares</button>
         </div>
-        <div class="hint">QIB allotment is proportionate: shares applied ÷ subscription (x).</div>
+        <div class="hint">SEBI / registrar: Mainboard rounds down to whole shares, SME rounds down to whole lots (below 1 lot = draw of lots).</div>
       </div>
     </div>
 
@@ -187,6 +198,11 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
           </div>
         </div>
         <div class="kpis" id="kpis"></div>
+      </div>
+
+      <div class="card">
+        <h2>SEBI allotment working (ICDR 2018, Schedule XIV)</h2>
+        <div id="working"></div>
       </div>
 
       <div class="card">
@@ -247,6 +263,7 @@ function load(){
   try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
   if(!S||!S.ipos){S={amount:5000000,xStart:25,xStep:25,xRows:12,round:'exact',cSubs:100,cMode:'common',ipos:[],sel:null,fresh:true}}
   S.removed=S.removed||[];
+  if(!S.sebi){S.round='auto';S.sebi=1}
   pickSel();
 }
 function pickSel(){if(!S.sel||!S.ipos.find(i=>i.id===S.sel))S.sel=S.ipos[0]&&S.ipos[0].id}
@@ -294,21 +311,35 @@ function apply(ipo,amount){
   let lots=lotCost>0?Math.floor(amount/lotCost):0, capped=false;
   if(n(ipo.qibCr)>0&&lotCost>0){const cap=Math.floor(n(ipo.qibCr)*1e7/lotCost);if(lots>cap){lots=cap;capped=true}}
   const shares=lots*lot, applied=shares*price;
-  return {price,lot,gmp,lotCost,lots,shares,applied,left:amount-applied,capped,
+  // SEBI ICDR Sch. XIV: 5% of net QIB is reserved for MFs. r = MF reserve actually taken up, as a fraction of net QIB
+  // (MF bids ÷ net QIB, capped at 5%; assume the full 5% when MF bids are not entered).
+  const r=n(ipo.qibCr)>0&&String(ipo.mfCr??'')!==''?Math.min(n(ipo.mfCr)/n(ipo.qibCr),0.05):0.05;
+  return {price,lot,gmp,lotCost,lots,shares,applied,left:amount-applied,capped,r,
+    sme:/sme/i.test(ipo.exch||''),netQibSh:n(ipo.qibCr)>0&&price?Math.floor(n(ipo.qibCr)*1e7/price):0,
     gmpPct:price?gmp/price*100:0,listPrice:price+gmp,maxProfit:shares*gmp};
 }
-function allot(a,x,round){
+// Non-MF QIB allotment ratio at QIB subscription x (x = QIB demand ÷ net QIB shares):
+// general pool = (1−r)·N, competing demand = x·N − r·N  →  ratio = (1−r)/(x−r); full allotment at x ≤ 1.
+function ratioAt(a,x){return x<=1?1:(1-a.r)/(x-a.r)}
+function rmode(a){return S.round==='auto'?(a.sme?'lotFloor':'shFloor'):S.round==='nearest'?'lotNear':'shFloor'}
+function rdesc(a){return {lotFloor:'rounded down to whole lots (SME)',shFloor:'rounded down to whole shares',lotNear:'rounded to nearest lot (0.5 lot or more rounds up)'}[rmode(a)]}
+function allot(a,x){
   x=Math.max(n(x),0);
-  let sh = x<=1 ? a.shares : a.shares/x;
+  const ratio=ratioAt(a,x), raw=a.shares*ratio, simple=x>1?a.shares/x:a.shares;
+  let sh=raw, lottery=0;
   if(x>1){
-    if(round==='nearest')sh=Math.round(sh/a.lot)*a.lot;
-    else if(round==='down')sh=Math.floor(sh/a.lot)*a.lot;
-    else sh=Math.floor(sh);
+    const m=rmode(a);
+    if(m==='lotNear')sh=Math.round(raw/a.lot)*a.lot;
+    else if(m==='lotFloor')sh=Math.floor(raw/a.lot)*a.lot;
+    else sh=Math.floor(raw);
+    // SME: proportionate entitlement below one lot is decided by draw of lots for one lot
+    if(m!=='shFloor'&&sh===0&&raw>0&&a.lot){lottery=raw/a.lot}
   }
   const amt=sh*a.price, profit=sh*a.gmp;
-  return {x,sh,lots:a.lot?sh/a.lot:0,amt,refund:a.applied-amt,profit,
+  return {x,ratio,raw,simple,sh,lottery,lots:a.lot?sh/a.lot:0,amt,refund:a.applied-amt,profit,
     roi:a.applied?profit/a.applied*100:0, listVal:sh*a.listPrice};
 }
+const pct=v=>num(v*100,4)+'%';
 function xs(){const r=[];for(let i=0;i<Math.max(1,n(S.xRows));i++)r.push(n(S.xStart)+i*n(S.xStep));return r}
 
 /* ---------- calculator view ---------- */
@@ -338,32 +369,54 @@ function renderCalc(){
     ['GMP',inr(a.gmp)+' / share',num(a.gmpPct,2)+'% over issue price'],
     ['Est. listing price',inr(a.listPrice,2),'issue price + GMP'],
     ['Profit if fully allotted',inr(a.maxProfit),'at 1x or below'],
-    ['Live QIB subscription',ipo.subs?num(n(ipo.subs),2)+'x':'—',ipo.subs>0?'profit ≈ '+inr(allot(a,ipo.subs,S.round).profit):'enter in IPO details']
+    ['Live QIB subscription',ipo.subs?num(n(ipo.subs),2)+'x':'—',ipo.subs>0?'profit ≈ '+inr(allot(a,ipo.subs).profit):'enter in IPO details']
   ].map(k=>`<div class="kpi${k[3]?' hl':''}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
   $('#tPrice').textContent=num(a.price,2); $('#tGmp').textContent=num(a.gmp,2);
-  const rows=xs().map(x=>allot(a,x,S.round));
-  const live=n(ipo.subs)>0?allot(a,ipo.subs,S.round):null;
+  const rows=xs().map(x=>allot(a,x));
+  const live=n(ipo.subs)>0?allot(a,ipo.subs):null;
   const max=Math.max(1,...rows.map(r=>Math.abs(r.profit)),live?Math.abs(live.profit):0);
   const tr=(r,i,isLive)=>`<tr${isLive?' class="cur"':''}><td>${isLive?num(r.x,2)+'x (live)':`<input class="x" data-i="${i}" value="${r.x}">`}</td>
-    <td>${num(r.sh)}</td><td>${num(r.lots,2)}</td><td>${inr(r.amt)}</td><td>${inr(r.refund)}</td>
+    <td>${pct(r.ratio)}</td><td>${num(r.raw,2)}</td>
+    <td><b>${num(r.sh)}</b>${r.lottery?`<div class="lot">draw of lots: ${num(r.lottery*100,1)}% chance of 1 lot (≈ ${inr(r.lottery*a.lot*a.gmp)} expected)</div>`:''}</td><td><b>${num(r.lots,2)}</b></td><td>${inr(r.amt)}</td><td>${inr(r.refund)}</td>
     <td><div class="bar"><i style="width:${Math.round(Math.abs(r.profit)/max*90)}px"></i><span class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</span></div></td>
     <td>${num(r.roi,2)}%</td></tr>`;
-  $('#ptbl').innerHTML=`<thead><tr><th>Subscription</th><th>Shares allotted</th><th>Lots allotted</th><th>Allotted value</th><th>Refund</th><th>Profit @ GMP</th><th>Return on applied</th></tr></thead><tbody>${live?tr(live,-1,true):''}${rows.map((r,i)=>tr(r,i)).join('')}</tbody>`;
-  $('#tNote').textContent=`Applied ${num(a.shares)} shares (${num(a.lots)} lots) for ${inr(a.applied)}. Allotted shares = shares applied ÷ subscription (x)${S.round==='exact'?'':', rounded to '+(S.round==='nearest'?'nearest':'lower')+' lot'}. Profit = allotted shares × GMP. Edit any x value in the first column.`;
+  $('#ptbl').innerHTML=`<thead><tr><th>Subscription</th><th>Allotment ratio</th><th>Proportionate shares</th><th>Final shares</th><th>Final lots</th><th>Allotted value</th><th>Refund</th><th>Profit @ GMP</th><th>Return on applied</th></tr></thead><tbody>${live?tr(live,-1,true):''}${rows.map((r,i)=>tr(r,i)).join('')}</tbody>`;
+  $('#tNote').textContent=`Applied ${num(a.shares)} shares (${num(a.lots)} lots) for ${inr(a.applied)}. Allotment ratio = (1 − ${num(a.r*100,2)}% MF reserve) ÷ (x − ${num(a.r*100,2)}%). Proportionate shares = shares applied × ratio, then ${rdesc(a)}. Profit = final shares × GMP. Edit any x value in the first column.`;
+  renderWorking(ipo,a,live||rows[0]);
   $$('#roundT button').forEach(b=>b.classList.toggle('active',b.dataset.r===S.round));
+}
+
+// Step-by-step SEBI working for one subscription level (live x if entered, else first table row)
+function workSteps(ipo,a,w){
+  const N=a.netQibSh, R=Math.round(N*a.r);
+  return [
+    ['Your bid',`${num(a.lots)} lots × ${num(a.lot)} = ${num(a.shares)} shares × ₹${num(a.price,2)} (upper band)`+(a.applied<=200000?' — note: a QIB bid must exceed ₹2 lakh':''),inr(a.applied)],
+    ['Net QIB portion (excl. anchor)',N?`₹${ipo.qibCr} Cr ÷ ₹${num(a.price,2)}`:'Enter net QIB ₹ Cr to see share counts (ratio does not need it)',N?num(N)+' sh':'—'],
+    ['Mutual fund reserve (5% of net QIB)',`MF take-up ${num(a.r*100,2)}% of net QIB${String(ipo.mfCr??'')===''?' (assumed full)':''}; balance pool for all QIBs = ${num((1-a.r)*100,2)}%`,N?num(R)+' sh':num(a.r*100,2)+'%'],
+    ['QIB subscription',`Demand = ${num(w.x,2)} × net QIB${N?' = '+num(Math.round(w.x*N))+' sh':''}; competing in pool = x − MF reserve = ${num(Math.max(w.x-a.r,0),4)}`,num(w.x,2)+'x'],
+    ['Allotment ratio',w.x<=1?'Under-subscribed: full allotment':`(1 − ${num(a.r,4)}) ÷ (${num(w.x,2)} − ${num(a.r,4)})  ·  simple ÷x would be ${pct(1/w.x)}`,pct(w.ratio)],
+    ['Proportionate entitlement',`${num(a.shares)} × ${pct(w.ratio)}  ·  simple ÷x method: ${num(w.simple,2)}`,num(w.raw,2)+' sh'],
+    ['Final allotment',`${rdesc(a)}${w.lottery?` — below 1 lot: draw of lots, ${num(w.lottery*100,1)}% chance of 1 lot`:''}`,`${num(w.sh)} sh · ${num(w.lots,2)} lots`],
+    ['Money',`Allotted ${inr(w.amt)} · refund/unblock ${inr(w.refund)}`,inr(w.amt)],
+    ['Expected listing profit',`${num(w.sh)} sh × GMP ₹${num(a.gmp,2)} · return on applied ${num(w.roi,2)}%`,inr(w.profit)]
+  ];
+}
+function renderWorking(ipo,a,w){
+  $('#working').innerHTML=`<div class="steps">${workSteps(ipo,a,w).map((s,i,arr)=>`<div class="step${i>=arr.length-3?' fin':''}"><div><b>${s[0]}</b><small>${s[1]}</small></div><b class="r">${s[2]}</b></div>`).join('')}</div>
+  <div class="note">Method: SEBI ICDR Regulations 2018, Schedule XIV (Reg. 32 mainboard; Ch. IX Reg. 253 SME) — net QIB excludes the anchor portion; 5% of net QIB is reserved for mutual funds; the balance is allotted proportionately to all QIBs, with MFs' unmet demand competing in that pool. Final valid demand in the registrar's Basis of Allotment is usually a little lower than the live figure, so actual allotment can be slightly higher.</div>`;
 }
 
 /* ---------- compare view ---------- */
 function cmpRows(){
   const amount=n(S.amount);
-  return S.ipos.map(ipo=>{const a=apply(ipo,amount);const x=S.cMode==='own'?n(ipo.subs):n(S.cSubs);return {ipo,a,r:allot(a,x,S.round)}});
+  return S.ipos.map(ipo=>{const a=apply(ipo,amount);const x=S.cMode==='own'?n(ipo.subs):n(S.cSubs);return {ipo,a,r:allot(a,x)}});
 }
 function renderCmp(){
   if(document.activeElement!==$('#cAmount'))$('#cAmount').value=num(n(S.amount));
   if(document.activeElement!==$('#cSubs'))$('#cSubs').value=S.cSubs;
   $$('#cMode button').forEach(b=>b.classList.toggle('active',b.dataset.m===S.cMode));
   const rows=cmpRows(); const best=Math.max(...rows.filter(r=>r.ipo.inc).map(r=>r.r.profit),-Infinity);
-  $('#ctbl').innerHTML=`<thead><tr><th>PDF</th><th style="text-align:left">IPO</th><th>Upper band</th><th>Lot</th><th>GMP ₹</th><th>GMP %</th><th>Lots</th><th>Shares</th><th>Applied</th><th>Sub. x</th><th>Shares allotted</th><th>Allotted value</th><th>Profit</th><th>Return</th></tr></thead><tbody>${
+  $('#ctbl').innerHTML=`<thead><tr><th>PDF</th><th style="text-align:left">IPO</th><th>Upper band</th><th>Lot</th><th>GMP ₹</th><th>GMP %</th><th>Lots</th><th>Shares</th><th>Applied</th><th>Sub. x</th><th>Shares allotted</th><th>Lots allotted</th><th>Allotted value</th><th>Profit</th><th>Return</th></tr></thead><tbody>${
     rows.map(({ipo,a,r})=>`<tr class="${ipo.inc&&r.profit===best&&best>0?'best':''}">
       <td><input type="checkbox" class="chk" data-inc="${ipo.id}" ${ipo.inc?'checked':''}></td>
       <td><b>${esc(ipo.name)}</b><br><span style="font-size:.68rem;color:var(--muted)">${esc(ipo.exch)} · closes ${dt(ipo.close)}</span></td>
@@ -371,7 +424,7 @@ function renderCmp(){
       <td><input class="sm" data-cg="${ipo.id}" value="${ipo.gmp}"></td><td>${num(a.gmpPct,2)}%</td>
       <td>${num(a.lots)}</td><td>${num(a.shares)}</td><td>${inr(a.applied)}</td>
       <td>${S.cMode==='own'?`<input class="sm" data-cs="${ipo.id}" value="${ipo.subs}">`:num(r.x,2)+'x'}</td>
-      <td>${num(r.sh)}</td><td>${inr(r.amt)}</td><td class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</td><td>${num(r.roi,2)}%</td></tr>`).join('')
+      <td><b>${num(r.sh)}</b>${r.lottery?`<div class="lot">${num(r.lottery*100,1)}% lottery</div>`:''}</td><td>${num(r.lots,2)}</td><td>${inr(r.amt)}</td><td class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</td><td>${num(r.roi,2)}%</td></tr>`).join('')
   }</tbody>`;
 }
 
@@ -430,39 +483,46 @@ function ipoPdf(){
   kpiBox(doc,14,y,bw,bh,'GMP per share',rs(a.gmp,2),num(a.gmpPct,2)+'% over issue price');
   kpiBox(doc,14+(bw+3),y,bw,bh,'Est. listing price',rs(a.listPrice,2),'issue price + GMP');
   kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Profit if fully allotted',rs(a.maxProfit),'at 1x or below',true);
-  const live=n(ipo.subs)>0?allot(a,ipo.subs,S.round):null;
+  const live=n(ipo.subs)>0?allot(a,ipo.subs):null;
   kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Live QIB subscription',live?num(live.x,2)+'x':'-',live?'profit ~ '+rs(live.profit):'not entered');
   y+=bh+9;
   doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
   doc.text(`Expected profit at X subscription  (upper band Rs. ${num(a.price,2)}, GMP Rs. ${num(a.gmp,2)})`,14,y);
   y+=2;
-  const rows=xs().map(x=>allot(a,x,S.round)); const all=live?[live,...rows]:rows;
+  const rows=xs().map(x=>allot(a,x)); const all=live?[live,...rows]:rows;
   const max=Math.max(1,...all.map(r=>Math.abs(r.profit)));
   doc.autoTable({startY:y+1,margin:{left:14,right:14},theme:'plain',
-    head:[['Subscription','Shares allotted','Lots allotted','Allotted value','Refund','Profit @ GMP','Return','']],
-    body:all.map((r,i)=>[(live&&i===0)?num(r.x,2)+'x (live)':num(r.x,2)+'x',num(r.sh),num(r.lots,2),rs(r.amt),rs(r.refund),rs(r.profit),num(r.roi,2)+'%','']),
-    headStyles:{fillColor:C.ink,textColor:255,fontStyle:'bold',fontSize:7.5,halign:'right'},
-    styles:{fontSize:8,cellPadding:{top:2.1,bottom:2.1,left:2.5,right:2.5},halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
-    columnStyles:{0:{halign:'left',fontStyle:'bold'},5:{fontStyle:'bold',textColor:C.gd},7:{cellWidth:30}},
+    head:[['Subscription','Allot ratio','Proportionate','Final shares','Final lots','Allotted value','Refund','Profit @ GMP','Return','']],
+    body:all.map((r,i)=>[(live&&i===0)?num(r.x,2)+'x (live)':num(r.x,2)+'x',pct(r.ratio),num(r.raw,2),num(r.sh)+(r.lottery?' *':''),num(r.lots,2),rs(r.amt),rs(r.refund),rs(r.profit),num(r.roi,2)+'%','']),
+    headStyles:{fillColor:C.ink,textColor:255,fontStyle:'bold',fontSize:7,halign:'right'},
+    styles:{fontSize:7.6,cellPadding:{top:2,bottom:2,left:1.8,right:1.8},halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
+    columnStyles:{0:{halign:'left',fontStyle:'bold'},3:{fontStyle:'bold'},4:{fontStyle:'bold'},7:{fontStyle:'bold',textColor:C.gd},9:{cellWidth:20}},
     alternateRowStyles:{fillColor:[250,252,251]},
     didParseCell:d=>{if(d.section==='head'&&d.column.index===0)d.cell.styles.halign='left';
       if(d.section==='body'&&live&&d.row.index===0)d.cell.styles.fillColor=C.amber;
-      if(d.section==='body'&&d.column.index===5&&all[d.row.index].profit<0)d.cell.styles.textColor=[220,38,38];},
-    didDrawCell:d=>{if(d.section==='body'&&d.column.index===7){const r=all[d.row.index];const w=Math.abs(r.profit)/max*(d.cell.width-5);
+      if(d.section==='body'&&d.column.index===7&&all[d.row.index].profit<0)d.cell.styles.textColor=[220,38,38];},
+    didDrawCell:d=>{if(d.section==='body'&&d.column.index===9){const r=all[d.row.index];const w=Math.abs(r.profit)/max*(d.cell.width-4);
       doc.setFillColor(...(r.profit<0?[220,38,38]:C.green));doc.roundedRect(d.cell.x+2,d.cell.y+d.cell.height/2-1.6,Math.max(w,0.6),3.2,1.2,1.2,'F');}}
   });
-  y=doc.lastAutoTable.finalY+7;
-  if(y>H-50){doc.addPage();y=20}
-  doc.setFillColor(...C.soft);doc.roundedRect(14,y,W-28,30,2.5,2.5,'F');
-  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.gd);doc.text('How to read this report',18,y+6);
-  doc.setFont('helvetica','normal');doc.setFontSize(7.6);doc.setTextColor(...C.ink);
-  const lines=[
-    `1. With ${rs(amount)} available, you can apply for ${num(a.lots)} lots (${num(a.shares)} shares) at the upper band of Rs. ${num(a.price,2)} = ${rs(a.applied)}.`,
-    `2. QIB allotment is proportionate: shares allotted = shares applied / subscription (x)${S.round==='exact'?'':', rounded to the '+(S.round==='nearest'?'nearest':'lower')+' lot'}.`,
-    `3. Profit = shares allotted x GMP (Rs. ${num(a.gmp,2)}). The rest of the blocked amount is refunded / unblocked after allotment.`,
-    `4. Example: at ${num(rows[Math.min(3,rows.length-1)].x)}x subscription you get ~${num(rows[Math.min(3,rows.length-1)].sh)} shares and an expected profit of ${rs(rows[Math.min(3,rows.length-1)].profit)}.`
-  ];
-  lines.forEach((l,i)=>doc.text(l,18,y+12+i*4.6,{maxWidth:W-36}));
+  y=doc.lastAutoTable.finalY+4;
+  doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...C.muted);
+  doc.text(`Allot ratio = (1 - MF reserve ${num(a.r*100,2)}%) / (x - ${num(a.r*100,2)}%). Proportionate = shares applied x ratio, then ${rdesc(a)}.${all.some(r=>r.lottery)?' * below 1 lot: decided by draw of lots for one lot.':''}`,14,y+1,{maxWidth:W-28});
+  y+=8;
+  // SEBI step-by-step working at live x (or first row)
+  const w=live||rows[0], steps=workSteps(ipo,a,w).map(s=>s.map(t=>String(t).replace(/₹/g,'Rs. ').replace(/·/g,'|').replace(/—/g,'-').replace(/×/g,'x').replace(/÷/g,'/').replace(/−/g,'-')));
+  if(y>H-95){doc.addPage();y=20}
+  doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
+  doc.text(`SEBI allotment working at ${num(w.x,2)}x  (ICDR 2018, Schedule XIV)`,14,y);
+  doc.autoTable({startY:y+2,margin:{left:14,right:14},theme:'plain',
+    body:steps.map((s,i)=>[String(i+1),s[0],s[1],s[2]]),
+    styles:{fontSize:7.6,cellPadding:2,textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2},valign:'middle'},
+    columnStyles:{0:{cellWidth:7,halign:'center',fontStyle:'bold',textColor:255,fillColor:C.ink},1:{cellWidth:46,fontStyle:'bold'},2:{textColor:C.muted},3:{cellWidth:38,halign:'right',fontStyle:'bold'}},
+    didParseCell:d=>{if(d.row.index>=steps.length-3){if(d.column.index===0)d.cell.styles.fillColor=C.green;else d.cell.styles.fillColor=C.soft;if(d.column.index===3)d.cell.styles.textColor=C.gd}}
+  });
+  y=doc.lastAutoTable.finalY+5;
+  if(y>H-30){doc.addPage();y=20}
+  doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...C.muted);
+  doc.text('Method: SEBI ICDR Regulations 2018, Schedule XIV (Reg. 32 mainboard; Chapter IX Reg. 253 SME). Net QIB excludes the anchor portion; 5% of net QIB is reserved for mutual funds; the balance is allotted proportionately to all QIBs, with MFs\' unmet demand competing in that pool. Final valid demand in the registrar\'s Basis of Allotment is usually slightly lower than the live figure, so the actual allotment can be marginally higher.',14,y,{maxWidth:W-28});
   pdfFooter(doc,W,H);
   doc.save(`${(ipo.name||'IPO').replace(/[^\w]+/g,'_')}_IPO_Report_${new Date().toISOString().slice(0,10)}.pdf`);
 }
@@ -481,11 +541,11 @@ function cmpPdf(){
   kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Top pick by profit',best.ipo.name.length>22?best.ipo.name.slice(0,21)+'…':best.ipo.name,'GMP '+num(best.a.gmpPct,2)+'%',true);
   kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Top expected profit',rs(best.r.profit),'at '+num(best.r.x,2)+'x subscription',true);
   doc.autoTable({startY:y+bh+6,margin:{left:14,right:14},theme:'plain',
-    head:[['#','IPO','Exchange','Closes','Upper band','Lot','GMP','GMP %','Lots','Shares','Applied','Sub. x','Shares allotted','Allotted value','Profit','Return']],
-    body:sorted.map(({ipo,a,r},i)=>[i+1,ipo.name,ipo.exch,dt(ipo.close),rs(a.price,2),num(a.lot),rs(a.gmp,2),num(a.gmpPct,2)+'%',num(a.lots),num(a.shares),rs(a.applied),num(r.x,2)+'x',num(r.sh),rs(r.amt),rs(r.profit),num(r.roi,2)+'%']),
+    head:[['#','IPO','Exchange','Closes','Upper band','Lot','GMP','GMP %','Lots','Shares','Applied','Sub. x','Shares allotted','Lots allotted','Allotted value','Profit','Return']],
+    body:sorted.map(({ipo,a,r},i)=>[i+1,ipo.name,ipo.exch,dt(ipo.close),rs(a.price,2),num(a.lot),rs(a.gmp,2),num(a.gmpPct,2)+'%',num(a.lots),num(a.shares),rs(a.applied),num(r.x,2)+'x',num(r.sh)+(r.lottery?' *':''),num(r.lots,2),rs(r.amt),rs(r.profit),num(r.roi,2)+'%']),
     headStyles:{fillColor:C.ink,textColor:255,fontSize:7,fontStyle:'bold',halign:'right'},
     styles:{fontSize:7.4,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2},cellWidth:'wrap'},
-    columnStyles:{1:{halign:'left',fontStyle:'bold',cellWidth:'auto'},2:{halign:'left'},3:{halign:'left'},14:{fontStyle:'bold',textColor:C.gd}},
+    columnStyles:{1:{halign:'left',fontStyle:'bold',cellWidth:'auto'},2:{halign:'left'},3:{halign:'left'},15:{fontStyle:'bold',textColor:C.gd}},
     alternateRowStyles:{fillColor:[250,252,251]},
     didParseCell:d=>{if(d.section==='head'&&d.column.index<4)d.cell.styles.halign='left';
       if(d.section==='body'&&d.row.index===0)d.cell.styles.fillColor=C.soft;}
@@ -495,15 +555,15 @@ function cmpPdf(){
   const yy=doc.lastAutoTable.finalY+8;
   doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...C.ink);
   doc.text('Expected profit at X subscription — side by side',14,yy);
-  const mat=sorted.map(({ipo,a})=>[ipo.name,...xv.map(x=>rs(allot(a,x,S.round).profit))]);
-  const colMax=xv.map((x,j)=>Math.max(...sorted.map(s=>allot(s.a,x,S.round).profit)));
+  const mat=sorted.map(({ipo,a})=>[ipo.name,...xv.map(x=>rs(allot(a,x).profit))]);
+  const colMax=xv.map((x,j)=>Math.max(...sorted.map(s=>allot(s.a,x).profit)));
   doc.autoTable({startY:yy+3,margin:{left:14,right:14},theme:'plain',
     head:[['IPO',...xv.map(x=>num(x)+'x')]],body:mat,
     headStyles:{fillColor:C.green,textColor:255,fontSize:7,fontStyle:'bold',halign:'right'},
     styles:{fontSize:7.4,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
     columnStyles:{0:{halign:'left',fontStyle:'bold'}},
     didParseCell:d=>{if(d.section==='head'&&d.column.index===0)d.cell.styles.halign='left';
-      if(d.section==='body'&&d.column.index>0){const v=allot(sorted[d.row.index].a,xv[d.column.index-1],S.round).profit;
+      if(d.section==='body'&&d.column.index>0){const v=allot(sorted[d.row.index].a,xv[d.column.index-1]).profit;
         if(v===colMax[d.column.index-1]&&v>0){d.cell.styles.fillColor=C.soft;d.cell.styles.fontStyle='bold';d.cell.styles.textColor=C.gd}}}
   });
   pdfFooter(doc,W,H);
