@@ -97,6 +97,38 @@ input:focus,select:focus{border-color:var(--teal)}
 .budget .sep{color:var(--muted)}
 .budget .btns{margin-left:auto}
 .vt input.amt.own{border-color:var(--teal);background:var(--teal-soft)}
+#v-calc .card{margin-top:14px}
+.howto{display:flex;gap:6px;flex-wrap:wrap;list-style:none;margin:2px 0 4px;counter-reset:h}
+.howto li{counter-increment:h;font-size:.74rem;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px}
+.howto li:before{content:counter(h) " · ";color:var(--green);font-weight:800}
+.howto li b{color:var(--ink);font-weight:600}
+.h2note{font-size:.68rem;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);margin-left:6px}
+.pills{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.pill{flex:none;text-align:left;border:1.5px solid var(--line);background:#fff;border-radius:14px;padding:9px 14px;font-family:inherit;cursor:pointer;min-width:150px}
+.pill b{display:block;font-size:.84rem;color:var(--ink)}
+.pill small{font-size:.68rem;color:var(--muted)}
+.pill.on{border-color:var(--green);background:var(--green-soft);box-shadow:0 0 0 3px rgba(31,164,99,.15)}
+.keycard{border:2px solid var(--green)}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:900px){.keys{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.keys{grid-template-columns:1fr}}
+.key label{display:flex;align-items:center;gap:8px;font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:6px}
+.kn{width:22px;height:22px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center;font-size:.72rem;flex:none}
+.kin{display:flex;align-items:center;gap:6px;border:2px solid var(--line);border-radius:12px;padding:0 12px;background:#fbfdfc;transition:border-color .15s}
+.kin:focus-within{border-color:var(--green);background:#fff}
+.kin span{font-weight:700;color:var(--muted);font-size:1rem}
+.kin input{border:none;background:transparent;padding:12px 0;font-size:1.35rem;font-weight:800;min-width:0;outline:none}
+.kh{font-size:.7rem;color:var(--muted);margin-top:5px;min-height:1em;line-height:1.4}
+.kh a,.kh .rs{color:var(--teal);cursor:pointer;font-weight:600;text-decoration:underline dotted}
+.kh .ed{color:var(--amber);font-weight:700}
+.answer{background:var(--green-soft);border:1px solid #bfe6cf;border-radius:14px;padding:14px 16px;margin-bottom:12px;font-size:.9rem;line-height:1.6}
+.answer b{font-size:1.05rem}
+.answer .a1{font-size:1.25rem;font-weight:800;color:var(--green-dark)}
+.bigbtn{padding:13px 18px;font-size:.9rem}
+details.adv summary{cursor:pointer;font-size:.8rem;font-weight:700;color:var(--ink);list-style:none;display:flex;align-items:center;gap:8px}
+details.adv summary:before{content:'▸';color:var(--green);transition:transform .15s}
+details.adv[open] summary:before{transform:rotate(90deg)}
+details.adv summary::-webkit-details-marker{display:none}
 .livecard{margin-top:14px;border-radius:16px;padding:18px;background:linear-gradient(135deg,#1f2430 0%,#22313a 100%);color:#fff;box-shadow:0 6px 20px rgba(16,24,40,.18)}
 .livecard .lh{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .livecard .tag{display:inline-flex;align-items:center;gap:6px;background:rgba(220,38,38,.18);color:#fecaca;font-size:.66rem;font-weight:800;letter-spacing:1.5px;padding:4px 9px;border-radius:999px}
@@ -173,23 +205,64 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
 <main>
 <!-- ============ CALCULATOR ============ -->
 <section class="view active" id="v-calc">
-  <div class="layout">
-    <div>
-      <div class="card">
-        <h2>Your funds</h2>
-        <div class="f">
-          <label>Amount available in bank (₹)</label>
-          <input id="amount" class="big" inputmode="numeric">
-          <div class="hint" id="amountWords"></div>
-        </div>
-        <div class="f">
-          <label>Select IPO</label>
-          <select id="ipoSel"></select>
-        </div>
-      </div>
+  <ol class="howto"><li><b>Pick an IPO</b></li><li><b>Check your 4 numbers</b> (already filled in)</li><li><b>See what you get</b></li><li><b>Download PDF</b></li></ol>
 
-      <div class="card">
-        <h2>IPO details (editable)</h2>
+  <div class="card">
+    <h2>① Pick an IPO</h2>
+    <div class="pills" id="ipoPills"></div>
+    <select id="ipoSel" hidden></select>
+  </div>
+
+  <div class="card keycard">
+    <h2>② Your 4 numbers <span class="h2note">pre-filled with live data · just type to change</span></h2>
+    <div class="keys">
+      <div class="key"><label><span class="kn">1</span>Bank balance</label>
+        <div class="kin"><span>₹</span><input id="amount" inputmode="numeric"></div>
+        <div class="kh" id="amountWords"></div></div>
+      <div class="key"><label><span class="kn">2</span>GMP per share</label>
+        <div class="kin"><span>₹</span><input data-k="gmp" type="number" step="any" inputmode="decimal"></div>
+        <div class="kh" id="liveGmp"></div></div>
+      <div class="key"><label><span class="kn">3</span>QIB subscription</label>
+        <div class="kin"><input data-k="subs" type="number" step="any" inputmode="decimal"><span>times</span></div>
+        <div class="kh" id="liveSubs"></div></div>
+      <div class="key"><label><span class="kn">4</span>Max QIB application</label>
+        <div class="kin"><span>₹</span><input id="maxAmt" inputmode="numeric"></div>
+        <div class="kh" id="maxSrc"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="hero">
+      <div>
+        <h2 style="margin-bottom:6px">③ What you get</h2>
+        <h3 id="hName"></h3>
+        <div class="dates" id="hDates"></div>
+      </div>
+      <div class="btns">
+        <button class="btn g bigbtn" id="pdfBtn">④ ⬇ Download PDF report</button>
+      </div>
+    </div>
+    <div class="answer" id="answer"></div>
+    <div class="kpis" id="kpis"></div>
+    <div id="qibWarn"></div>
+  </div>
+
+  <div id="liveCard"></div>
+
+  <div class="card">
+    <h2>Profit at different subscription levels — at upper band ₹<span id="tPrice"></span>, GMP ₹<span id="tGmp"></span></h2>
+    <div class="tblwrap"><table class="tbl" id="ptbl"></table></div>
+    <div class="note" id="tNote"></div>
+  </div>
+
+  <details class="card adv">
+    <summary>How the allotment is worked out (SEBI rules, step by step)</summary>
+    <div id="working" style="margin-top:12px"></div>
+  </details>
+
+  <details class="card adv">
+    <summary>More IPO details <span class="h2note">price band, lot, dates, QIB portion — rarely needed</span></summary>
+    <div style="margin-top:12px">
         <div class="f"><label>IPO name</label><input data-k="name"></div>
         <div class="row2">
           <div class="f"><label>Exchange / type</label><input data-k="exch"></div>
@@ -201,15 +274,10 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
           <div class="f"><label>Lot (shares)</label><input data-k="lot" type="number"></div>
         </div>
         <div class="row2">
-          <div class="f"><label>GMP (₹ per share)</label><input data-k="gmp" type="number" step="any"><div class="hint" id="liveGmp"></div></div>
-          <div class="f"><label>QIB subscription now (x)</label><input data-k="subs" type="number" step="any"></div>
-        </div>
-        <div class="row2">
           <div class="f"><label>Net QIB portion (₹ Cr, excl. anchor)</label><input data-k="qibCr" type="number" step="any"></div>
           <div class="f"><label>MF bids in QIB (₹ Cr)</label><input data-k="mfCr" type="number" step="any"></div>
         </div>
-        <div class="f"><label>Max QIB bid quantity (shares)</label><input data-k="maxQibSh" type="number"><div class="hint" id="maxSrc"></div></div>
-        <div class="hint" style="margin:-4px 0 10px">Net QIB portion drives the SEBI allotment ratio. Max QIB bid is the exchange's limit per application (warning above it, not a cap). The SEBI 5% mutual-fund reserve is always deducted. Live MF bids are not used (they stay near zero until the last day); type an MF figure only to model MFs taking less than their 5%.</div>
+        <div class="hint" style="margin:-4px 0 10px">The SEBI 5% mutual-fund reserve is always deducted. Live MF bids are not used (they stay near zero until the last day); type an MF figure only to model MFs taking less than their 5%.</div>
         <div class="row2">
           <div class="f"><label>Open</label><input data-k="open" type="date"></div>
           <div class="f"><label>Close</label><input data-k="close" type="date"></div>
@@ -217,10 +285,12 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
           <div class="f"><label>Listing</label><input data-k="listing" type="date"></div>
         </div>
         <button class="btn t" id="resetLive" style="display:none;width:100%">↺ Discard my edits, use live ipopremium values</button>
-      </div>
+    </div>
+  </details>
 
-      <div class="card">
-        <h2>Table settings</h2>
+  <details class="card adv">
+    <summary>Table settings <span class="h2note">subscription levels and rounding</span></summary>
+    <div style="margin-top:12px">
         <div class="row3">
           <div class="f"><label>Start (x)</label><input id="xStart" type="number"></div>
           <div class="f"><label>Step (x)</label><input id="xStep" type="number"></div>
@@ -238,38 +308,8 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
           <button data-r="exact">Floor shares</button>
         </div>
         <div class="hint">SEBI / registrar: Mainboard rounds down to whole shares, SME rounds down to whole lots (below 1 lot = draw of lots).</div>
-      </div>
     </div>
-
-    <div>
-      <div class="card">
-        <div class="hero">
-          <div>
-            <h3 id="hName"></h3>
-            <div class="dates" id="hDates"></div>
-          </div>
-          <div class="btns">
-            <button class="btn g" id="pdfBtn">⬇ Download PDF report</button>
-          </div>
-        </div>
-        <div class="kpis" id="kpis"></div>
-        <div id="qibWarn"></div>
-      </div>
-
-      <div id="liveCard"></div>
-
-      <div class="card">
-        <h2>SEBI allotment working (ICDR 2018, Schedule XIV)</h2>
-        <div id="working"></div>
-      </div>
-
-      <div class="card">
-        <h2>Expected profit at X subscription (QIB) — at upper band ₹<span id="tPrice"></span>, GMP ₹<span id="tGmp"></span></h2>
-        <div class="tblwrap"><table class="tbl" id="ptbl"></table></div>
-        <div class="note" id="tNote"></div>
-      </div>
-    </div>
-  </div>
+  </details>
 </section>
 
 <!-- ============ COMPARE ============ -->
@@ -435,33 +475,45 @@ function xs(){
 /* ---------- calculator view ---------- */
 function fillForm(){
   const ipo=cur(); if(!ipo)return;
-  $$('[data-k]').forEach(el=>el.value=ipo[el.dataset.k]??'');
+  $$('[data-k]').forEach(el=>{if(document.activeElement!==el)el.value=ipo[el.dataset.k]??''});
+  if(document.activeElement!==$('#amount'))$('#amount').value=num(n(S.amount));
+  const a=apply(ipo,0);
+  if(document.activeElement!==$('#maxAmt'))$('#maxAmt').value=a.maxQib?num(a.maxQib):'';
   const lv=liveOf(ipo), ed=ipo.edited||[];
-  $('#liveGmp').textContent=lv?(ed.includes('gmp')?`Live: ₹${lv.gmp} (you edited)`:`Live from ipopremium (${lv.gmpPct}%)`):'';
+  // hint under each key input: where the value came from, and a one-click way back to the live value
+  const hint=(k,liveTxt,edTxt)=>!lv?'':ed.includes(k)?`<span class="ed">You changed this</span> · live ${edTxt} · <span class="rs" data-rs="${k}">↺ use live</span>`:liveTxt;
+  $('#liveGmp').innerHTML=hint('gmp',`Live from ipopremium · ${num(a.gmpPct,1)}% listing gain`,'₹'+(lv?.gmp))||`${num(a.gmpPct,1)}% listing gain`;
+  $('#liveSubs').innerHTML=hint('subs','Live QIB subscription from ipopremium',num(n(lv?.subs),2)+'x')||'Times the QIB portion is subscribed';
+  $('#maxSrc').innerHTML=!a.maxQib?'Not published yet — type it from the NSE/BSE issue page':
+    (ed.includes('maxQibSh')?`<span class="ed">You changed this</span> · ${num(a.maxQibSh)} shares · <span class="rs" data-rs="maxQibSh">↺ use exchange value</span>`
+      :`${num(a.maxQibSh)} shares · ${esc(a.maxQibSrc)}${/estimate/.test(a.maxQibSrc)?' — verify in RHP':''}`);
   $('#resetLive').style.display=lv&&ed.length?'block':'none';
 }
 function markEdited(ipo,k){if(!ipo.src)return;ipo.edited=ipo.edited||[];if(!ipo.edited.includes(k))ipo.edited.push(k)}
 function renderSel(){
   $('#ipoSel').innerHTML=S.ipos.map(i=>`<option value="${i.id}"${i.id===S.sel?' selected':''}>${esc(i.name)} — ₹${i.priceHigh} × ${i.lot}</option>`).join('');
+  $('#ipoPills').innerHTML=S.ipos.map(i=>`<button class="pill${i.id===S.sel?' on':''}" data-pick-ipo="${i.id}"><b>${esc(i.name)}</b><small>${esc(i.exch)} · closes ${dt(i.close)}${n(i.gmp)?` · GMP ₹${i.gmp}`:''}</small></button>`).join('')||'<span class="hint">No IPOs yet — add one in Manage IPOs.</span>';
 }
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function renderCalc(){
   const ipo=cur(); if(!ipo){$('#hName').textContent='Add an IPO in "Manage IPOs"';return}
+  fillForm();
   const amount=n(S.amount), a=apply(ipo,amount);
-  $('#amountWords').textContent='₹ '+words(amount);
+  $('#amountWords').textContent='₹ '+words(amount)+' available';
   $('#hName').innerHTML=esc(ipo.name)+`<span class="chip">${esc(ipo.exch)}</span>`;
   $('#hDates').innerHTML=`<span>Price band <b>₹${ipo.priceLow||ipo.priceHigh}–${ipo.priceHigh}</b></span><span>Lot <b>${num(n(ipo.lot))}</b></span><span>Issue <b>₹${ipo.issueCr||'—'} Cr</b></span><span>Open <b>${dt(ipo.open)}</b></span><span>Close <b>${dt(ipo.close)}</b></span><span>Allotment <b>${dt(ipo.allot)}</b></span><span>Listing <b>${dt(ipo.listing)}</b></span>`;
   $('#kpis').innerHTML=[
-    ['Max application',inr(a.applied),'₹ '+words(a.applied)+(a.over?' · above max QIB ⚠':''),1],
-    ['Lots applied',num(a.lots),'1 lot = '+inr(a.lotCost)],
-    ['Shares applied',num(a.shares),'@ upper band ₹'+a.price],
-    ['Unused balance',inr(a.left),'stays in bank'],
-    ['GMP',inr(a.gmp)+' / share',num(a.gmpPct,2)+'% over issue price'],
-    ['Est. listing price',inr(a.listPrice,2),'issue price + GMP'],
-    ['Profit if fully allotted',inr(a.maxProfit),'at 1x or below'],
-    ['Live QIB subscription',ipo.subs?num(n(ipo.subs),2)+'x':'—',ipo.subs>0?'profit ≈ '+inr(allot(a,ipo.subs).profit):'enter in IPO details']
+    ['You can apply for',inr(a.applied),'₹ '+words(a.applied)+(a.over?' · above max QIB ⚠':''),1],
+    ['Lots / shares',`${num(a.lots)} / ${num(a.shares)}`,'1 lot = '+num(a.lot)+' sh = '+inr(a.lotCost)],
+    ['Stays in bank',inr(a.left),'not enough for one more lot'],
+    ['Expected listing price',inr(a.listPrice,2),'upper band ₹'+num(a.price,2)+' + GMP ₹'+num(a.gmp,2)]
   ].map(k=>`<div class="kpi${k[3]?' hl':''}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
-  $('#maxSrc').textContent=a.maxQibSrc?'Source: '+a.maxQibSrc+(/estimate/.test(a.maxQibSrc)?' — not yet published by NSE/BSE, verify in RHP':''):'Not published yet — enter from NSE/BSE issue page or RHP';
+  // one plain-English answer
+  const ax=n(ipo.subs)>1?n(ipo.subs):100, aw=allot(a,ax);
+  $('#answer').innerHTML=!a.lots?`Your balance is less than one lot (${inr(a.lotCost)}). Increase the bank balance to apply.`:
+    `<div class="a1">Apply for ${num(a.lots)} lots (${num(a.shares)} shares) = ${inr(a.applied)}</div>
+     At ${n(ipo.subs)>1?"today's":'an assumed'} <b>${num(ax,2)}x</b> QIB subscription you would get about <b>${num(aw.sh)} shares (${num(aw.lots,2)} lots)</b>${aw.lottery?` — below one lot, ${num(aw.lottery*100,1)}% lottery chance`:''},
+     an expected profit of <b>${inr(aw.profit)}</b> = <b>${num(aw.roi,2)}%</b> yield on the money blocked. ${inr(aw.refund)} comes back on ${dt(ipo.allot)}.`;
   $('#qibWarn').innerHTML=!a.maxQib?`<div class="qw">Max QIB bid quantity not available yet — enter it in IPO details from the NSE/BSE issue page.</div>`:`<div class="qw${a.over?' bad':''}">${a.over?'⚠ ':''}<b>Max QIB application: ${inr(a.maxQib)}</b> = ${num(a.maxQibSh)} shares (${num(a.maxQibLots)} lots) × ₹${num(a.price,2)} · source: ${esc(a.maxQibSrc)}.
     ${a.over?`Your application of ${inr(a.applied)} is above it by ${inr(a.applied-a.maxQib)}. Figures below are still calculated on your full amount — please verify.`:`Your application is within it.`}</div>`;
   $('#tPrice').textContent=num(a.price,2); $('#tGmp').textContent=num(a.gmp,2);
@@ -527,33 +579,29 @@ function cmpRows(){
 function cmpMetrics(){
   const lotNote=r=>r.r.lottery?` (${num(r.r.lottery*100,1)}% lottery for 1 lot)`:'';
   return [
+    ['§','Your 4 numbers — change these'],
+    ['Amount to block (₹) ✎',r=>`<input class="sm amt${r.a.own?' own':''}" inputmode="numeric" data-ca="${r.ipo.id}" value="${num(r.a.budget)}" title="Blank = bank amount">
+      <div class="lot" style="color:var(--teal);cursor:pointer">${r.a.own?`<span data-careset="${r.ipo.id}">↺ bank amount</span>`:''}${r.a.own&&r.a.maxQib?' · ':''}${r.a.maxQib?`<span data-camax="${r.ipo.id}">use max QIB</span>`:''}</div>
+      ${r.a.budget>n(S.amount)?'<div class="lot" style="color:var(--red)">more than bank balance</div>':''}`,r=>rs(r.a.budget)+(r.a.own?' (custom)':'')],
+    ['QIB subscription (x) ✎',r=>`<input class="sm" type="number" step="any" data-cs="${r.ipo.id}" value="${n(r.ipo.subs)}">`,r=>num(r.r.x,2)+'x'],
+    ['GMP (₹ / share) ✎',r=>`<input class="sm" type="number" step="any" data-cg="${r.ipo.id}" value="${n(r.ipo.gmp)}"><div style="font-size:.66rem;color:var(--muted)">${num(r.a.gmpPct,2)}% listing gain</div>`,r=>`${rs(r.a.gmp,2)} (${num(r.a.gmpPct,2)}%)`],
+    ['Max QIB application (₹) ✎',r=>`<input class="sm amt" inputmode="numeric" data-cm="${r.ipo.id}" value="${r.a.maxQib?num(r.a.maxQib):''}" placeholder="not published"><div style="font-size:.66rem;color:var(--muted)">${r.a.maxQib?`${num(r.a.maxQibSh)} sh · ${esc(r.a.maxQibSrc)}`:''}</div>`,r=>r.a.maxQib?`${rs(r.a.maxQib)} (${r.a.maxQibSrc})`:'-'],
+    ['§','Result'],
+    ['You get (shares · lots)',r=>`<b>${num(r.r.sh)} · ${num(r.r.lots,2)} lots</b>${r.r.lottery?`<div class="lot">${num(r.r.lottery*100,1)}% lottery</div>`:''}`,r=>`${num(r.r.sh)} sh (${num(r.r.lots,2)} lots)${lotNote(r)}`],
+    ['Expected profit',r=>`<span class="profit${r.r.profit<0?' neg':''}">${inr(r.r.profit)}</span>`,r=>rs(r.r.profit)],
+    ['YIELD on amount blocked',r=>num(r.r.roi,2)+'%',r=>num(r.r.roi,2)+'%','yl'],
     ['§','Issue'],
     ['Exchange',r=>esc(r.ipo.exch),r=>r.ipo.exch],
     ['Closes / allotment',r=>`${dt(r.ipo.close)} → ${dt(r.ipo.allot)}`,r=>`${dt(r.ipo.close)} > ${dt(r.ipo.allot)}`],
     ['Upper price band',r=>inr(r.a.price,2),r=>rs(r.a.price,2)],
     ['Lot size (lot value)',r=>`${num(r.a.lot)} (${inr(r.a.lotCost)})`,r=>`${num(r.a.lot)} (${rs(r.a.lotCost)})`],
-    ['§','Your application'],
-    ['Amount to block (₹) ✎',r=>`<input class="sm amt${r.a.own?' own':''}" inputmode="numeric" data-ca="${r.ipo.id}" value="${num(r.a.budget)}" title="Blank = bank amount">
-      <div class="lot" style="color:var(--teal);cursor:pointer">${r.a.own?`<span data-careset="${r.ipo.id}">↺ bank amount</span>`:''}${r.a.own&&r.a.maxQib?' · ':''}${r.a.maxQib?`<span data-camax="${r.ipo.id}">use max QIB</span>`:''}</div>
-      ${r.a.budget>n(S.amount)?'<div class="lot" style="color:var(--red)">more than bank balance</div>':''}`,r=>rs(r.a.budget)+(r.a.own?' (custom)':'')],
-    ['Lots applied',r=>num(r.a.lots),r=>num(r.a.lots)],
-    ['Shares applied',r=>num(r.a.shares),r=>num(r.a.shares)],
+    ['§','Details'],
+    ['Lots / shares applied',r=>`${num(r.a.lots)} / ${num(r.a.shares)}`,r=>`${num(r.a.lots)} / ${num(r.a.shares)}`],
     ['Actually blocked (whole lots)',r=>`<b>${inr(r.a.applied)}</b>${r.a.over?'<div class="lot" style="color:var(--red)">⚠ above max QIB application</div>':''}`,r=>rs(r.a.applied)+(r.a.over?' (above max QIB!)':'')],
-    ['Max QIB application',r=>r.a.maxQib?`${inr(r.a.maxQib)}<div style="font-size:.66rem;color:var(--muted)">${num(r.a.maxQibSh)} sh · ${num(r.a.maxQibLots)} lots · ${esc(r.a.maxQibSrc)}</div>`:'— (not published)',r=>r.a.maxQib?`${rs(r.a.maxQib)} (${num(r.a.maxQibLots)} lots, ${r.a.maxQibSrc})`:'-'],
-    ['§','Assumptions (pre-filled, editable)'],
-    ['QIB subscription (x)',r=>`<input class="sm" type="number" step="any" data-cs="${r.ipo.id}" value="${n(r.ipo.subs)}">`,r=>num(r.r.x,2)+'x'],
-    ['GMP (₹ / share)',r=>`<input class="sm" type="number" step="any" data-cg="${r.ipo.id}" value="${n(r.ipo.gmp)}">`,r=>rs(r.a.gmp,2)],
-    ['GMP % (listing gain)',r=>num(r.a.gmpPct,2)+'%',r=>num(r.a.gmpPct,2)+'%'],
-    ['§','SEBI allotment'],
-    ['Allotment ratio',r=>pct(r.r.ratio),r=>pct(r.r.ratio)],
+    ['Allotment ratio (SEBI)',r=>pct(r.r.ratio),r=>pct(r.r.ratio)],
     ['Proportionate shares',r=>num(r.r.raw,2),r=>num(r.r.raw,2)],
-    ['Final shares allotted',r=>`<b>${num(r.r.sh)}</b>${r.r.lottery?`<div class="lot">${num(r.r.lottery*100,1)}% lottery</div>`:''}`,r=>num(r.r.sh)+lotNote(r)],
-    ['Final lots allotted',r=>`<b>${num(r.r.lots,2)}</b>`,r=>num(r.r.lots,2)],
     ['Allotted value',r=>inr(r.r.amt),r=>rs(r.r.amt)],
     ['Refund / unblocked',r=>inr(r.r.refund),r=>rs(r.r.refund)],
-    ['§','Returns'],
-    ['Expected profit',r=>`<span class="profit${r.r.profit<0?' neg':''}">${inr(r.r.profit)}</span>`,r=>rs(r.r.profit)],
-    ['YIELD on amount applied',r=>num(r.r.roi,2)+'%',r=>num(r.r.roi,2)+'%','yl'],
     ['Funds blocked (days)',r=>r.days,r=>String(r.days)],
     ['Annualised yield',r=>num(r.ann,1)+'%',r=>num(r.ann,1)+'%'],
     ['Rank by yield',r=>'#'+r.rank,r=>'#'+r.rank]
@@ -809,7 +857,13 @@ function bind(){
   $('#ipoSel').onchange=e=>{S.sel=e.target.value;save();fillForm();renderCalc()};
   $$('[data-k]').forEach(el=>el.addEventListener('input',()=>{const ipo=cur();if(!ipo)return;
     ipo[el.dataset.k]=el.type==='number'?(el.value===''?'':n(el.value)):el.value;
-    if(FEED_KEYS.includes(el.dataset.k)){markEdited(ipo,el.dataset.k);$('#resetLive').style.display=liveOf(ipo)?'block':'none'}save();renderCalc();if(el.dataset.k==='name'||el.dataset.k==='priceHigh'||el.dataset.k==='lot')renderSel()}));
+    if(FEED_KEYS.includes(el.dataset.k)){markEdited(ipo,el.dataset.k);$('#resetLive').style.display=liveOf(ipo)?'block':'none'}save();renderCalc();if(['name','priceHigh','lot','gmp','close','exch'].includes(el.dataset.k))renderSel()}));
+  $('#ipoPills').onclick=e=>{const b=e.target.closest('[data-pick-ipo]');if(!b)return;S.sel=b.dataset.pickIpo;save();renderSel();renderCalc()};
+  $('#maxAmt').addEventListener('input',e=>{const ipo=cur();if(!ipo)return;const p=n(ipo.priceHigh);
+    ipo.maxQibSh=e.target.value.trim()===''||!p?'':Math.floor(n(e.target.value)/p);markEdited(ipo,'maxQibSh');if(!ipo.src)ipo.maxQibSrc='your entry';save();renderCalc()});
+  $('#maxAmt').addEventListener('blur',fillForm);
+  // "↺ use live" links under the key inputs
+  $('#v-calc').addEventListener('click',e=>{const r=e.target.closest('[data-rs]');if(!r)return;const ipo=cur();ipo.edited=(ipo.edited||[]).filter(k=>k!==r.dataset.rs);save();sync()});
   ['xStart','xStep','xSwitch','xStep2','xMax'].forEach(k=>{$('#'+k).value=S[k];$('#'+k).addEventListener('input',e=>{S[k]=n(e.target.value);save();renderCalc();renderCmp()})});
   $$('#roundT button').forEach(b=>b.onclick=()=>{S.round=b.dataset.r;save();renderCalc();renderCmp()});
   $('#pdfBtn').onclick=ipoPdf;
@@ -822,6 +876,7 @@ function bind(){
     if(t.dataset.cg){ipo=S.ipos.find(i=>i.id===t.dataset.cg);ipo.gmp=n(t.value);markEdited(ipo,'gmp')}
     if(t.dataset.cs){ipo=S.ipos.find(i=>i.id===t.dataset.cs);ipo.subs=n(t.value);markEdited(ipo,'subs')}
     if(t.dataset.ca){ipo=S.ipos.find(i=>i.id===t.dataset.ca);const v=t.value.trim();ipo.applyAmt=v===''||n(v)===n(S.amount)?'':n(v)}
+    if(t.dataset.cm){ipo=S.ipos.find(i=>i.id===t.dataset.cm);const p=n(ipo.priceHigh);ipo.maxQibSh=t.value.trim()===''||!p?'':Math.floor(n(t.value)/p);markEdited(ipo,'maxQibSh');if(!ipo.src)ipo.maxQibSrc='your entry'}
     save();renderCmp();fillForm();renderCalc()});
   $('#cPdf').onclick=cmpPdf;
   $('#ctbl').addEventListener('click',e=>{
@@ -830,7 +885,7 @@ function bind(){
     else if(m){const ipo=S.ipos.find(i=>i.id===m.dataset.camax);ipo.applyAmt=apply(ipo,0).maxQib}
     else return;
     save();renderCmp()});
-  $('#ctbl').addEventListener('focusin',e=>{if(e.target.dataset.ca)e.target.select()});
+  $('#ctbl').addEventListener('focusin',e=>{if(e.target.matches('input'))e.target.select()});
   $('#cPick').onclick=e=>{const b=e.target.closest('[data-inc]');if(!b)return;const ipo=S.ipos.find(i=>i.id===b.dataset.inc);ipo.inc=!ipo.inc;save();renderCmp()};
   $$('[data-pick]').forEach(b=>b.onclick=()=>{const today=new Date().toISOString().slice(0,10);
     S.ipos.forEach(i=>{i.inc=b.dataset.pick==='all'?true:b.dataset.pick==='none'?false:(i.status?i.status==='open':(i.close||'')>=today)});save();renderCmp()});
