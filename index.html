@@ -324,11 +324,21 @@ async function sync(){
     else if((f.status==='open'||f.status==='upcoming')&&!S.removed.includes(f.src))
       S.ipos.push({subs:0,qibCr:'',mfCr:'',...Object.fromEntries(FEED_KEYS.filter(k=>k in f).map(k=>[k,f[k]])),src:f.src,status:f.status,id:uid(),inc:true,edited:[]});
   }
+  // exact "Maximum Bid Quantity for QIB" from NSE (exchange.json, pushed by scripts/fetch_exchange.ps1) beats the estimate
+  try{
+    const ex=await (await fetch('exchange.json?t='+Date.now(),{cache:'no-store'})).json();
+    const when=new Date(ex.updated).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+    S.ipos.forEach(ipo=>{if((ipo.edited||[]).includes('maxQibSh'))return;
+      const it=(ex.items||[]).find(x=>x.key===normName(ipo.name));
+      if(it){ipo.maxQibSh=it.maxQibSh;ipo.maxQibSrc=`${it.exchange} (${it.symbol}, ${when})`}});
+  }catch(e){}
   S.fresh=false;pickSel();save();
   const t=new Date(feed.updated);
   $('#stamp').innerHTML=`GMP from <a href="https://www.ipopremium.in/" target="_blank" rel="noopener" style="color:var(--green-dark)">ipopremium.in</a> · updated ${t.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`;
   renderAll();
 }
+// company name -> first two significant words (same rule as scripts/fetch_exchange.ps1)
+function normName(s){return (s||'').toLowerCase().replace(/\b(limited|ltd|the|and|india)\b|&|[^a-z0-9 ]/g,' ').split(/\s+/).filter(Boolean).slice(0,2).join(' ')}
 const liveOf=ipo=>feed&&ipo.src?feed.ipos.find(f=>f.src===ipo.src):null;
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
