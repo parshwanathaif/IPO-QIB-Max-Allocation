@@ -46,9 +46,10 @@ if (-not $NoPush -and $items.Count) {
     $git = Join-Path $env:ProgramFiles 'Git\cmd\git.exe'
     Push-Location $root
     try {
-        & $git pull -q --rebase origin main
         & $git add exchange.json
         & $git diff --cached --quiet
-        if ($LASTEXITCODE -ne 0) { & $git commit -q -m "Update NSE/BSE max QIB bid"; & $git push -q }
+        if ($LASTEXITCODE -ne 0) { & $git commit -q -m "Update NSE max QIB bid" }
+        & $git pull -q --rebase origin main
+        & $git push -q
     } finally { Pop-Location }
 }
