@@ -51,6 +51,54 @@ def mdate(s, ref):
     return d.isoformat()
 
 
+def norm(name):
+    """Company name -> first two significant words, for matching across sites."""
+    s = re.sub(r"\b(limited|ltd|the|and|india)\b|&|[^a-z0-9 ]", " ", (name or "").lower())
+    return " ".join(s.split()[:2])
+
+
+def nse_max_qib():
+    """{norm(name): shares} from NSE's 'Maximum Bid Quantity for QIB Investors' (current issues)."""
+    out = {}
+    h = {"Referer": "https://www.nseindia.com/market-data/all-upcoming-issues-ipo", "Accept": "application/json"}
+    try:
+        get("https://www.nseindia.com/", Accept="text/html")  # sets the cookies the API needs
+        issues = json.loads(get("https://www.nseindia.com/api/ipo-current-issue", **h))
+        for it in issues:
+            sym, ser = it.get("symbol"), it.get("series")
+            if not sym:
+                continue
+            d = json.loads(get(f"https://www.nseindia.com/api/ipo-detail?symbol={urllib.parse.quote(sym)}&series={ser}", **h))
+            for row in (d.get("issueInfo") or {}).get("dataList", []):
+                if re.search(r"maximum bid quantity for qib", row.get("title") or "", re.I):
+                    out[norm(it.get("companyName"))] = int(num(row.get("value")))
+            time.sleep(1)
+    except Exception as e:
+        print(f"NSE unavailable: {e}")
+    print(f"NSE max QIB: {out}")
+    return out
+
+
+def bse_max_qib():
+    """{norm(name): shares} from BSE's 'Maximum Bid Quantity for Qualified Institutional Investors'."""
+    out = {}
+    h = {"Referer": "https://www.bseindia.com/", "Origin": "https://www.bseindia.com", "Accept": "application/json"}
+    try:
+        live = json.loads(get("https://api.bseindia.com/BseIndiaAPI/api/GetPublicIssue_par_updated/w?flag=1", **h))
+        for it in live.get("Table", []):
+            if it.get("IR_flag") != "IPO":
+                continue
+            d = json.loads(get(f"https://api.bseindia.com/BseIndiaAPI/api/ipo_details_ng/w?stripono={it['IPO_NO']}", **h))
+            for row in d.get("TableRows", []):
+                if re.search(r"maximum bid quantity for qualified institutional", row.get("Label") or "", re.I):
+                    out[norm(it.get("Scrip_Name"))] = int(num(row.get("Value")))
+            time.sleep(1)
+    except Exception as e:
+        print(f"BSE unavailable: {e}")
+    print(f"BSE max QIB: {out}")
+    return out
+
+
 def qib_details(url):
     """QIB subscription (x), net QIB offered (Rs Cr) and MF demand (Rs Cr) from the IPO page's
     'Subscription Demand (in Rs crore)' table. Returns {} when the table is not there yet."""
@@ -59,9 +107,18 @@ def qib_details(url):
     except Exception as e:  # one bad page should not sink the whole run
         print(f"skip {url}: {e}")
         return {}
+    out = {}
+    # fallback for max QIB bid: 'Total' offered shares in 'Subscription Details (No. of Shares)'
+    # = net issue excl. anchor & market maker (matches the exchange figure for SME issues)
+    j = page.find("Subscription Details")
+    if j >= 0:
+        for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", page[j:page.find("</table>", j)], re.S):
+            cells = [text(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
+            if len(cells) >= 2 and cells[0].strip().upper() == "TOTAL" and cells[1] not in ("", "-"):
+                out["totalOfferedSh"] = int(num(cells[1]))
     i = page.find("Subscription Demand")
     if i < 0:
-        return {}
+        return out
     table = page[i:page.find("</table>", i)]
     rows = {}
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", table, re.S):
@@ -71,7 +128,6 @@ def qib_details(url):
             # pages label rows either "QIB"/"MF" or "QIBs"/"Mutual funds"
             label = {"QIBS": "QIB", "MUTUAL FUNDS": "MF", "MUTUAL FUND": "MF"}.get(label, label)
             rows.setdefault(label, cells)
-    out = {}
     if "QIB" in rows:
         _, offered, _, times = rows["QIB"][:4]
         if times not in ("", "-"):
@@ -92,6 +148,7 @@ def main():
     url += "&" + urllib.parse.urlencode({"draw": 1, "start": 0, "length": 60})
     data = json.loads(get(url, **{"X-Requested-With": "XMLHttpRequest", "Accept": "application/json", "Referer": HOME}))
 
+    nse, bse = nse_max_qib(), bse_max_qib()
     ipos = []
     for d in data.get("data", []):
         if "Listed" in (d.get("open") or ""):
@@ -127,6 +184,14 @@ def main():
             "qibCr": detail.get("qibCr", ""),
             "mfCr": detail.get("mfCr", ""),
         })
+        # max QIB bid quantity: exchange figure first (NSE, then BSE), else ipopremium estimate
+        key = norm(ipos[-1]["name"])
+        if key in nse:
+            ipos[-1].update(maxQibSh=nse[key], maxQibSrc="NSE")
+        elif key in bse:
+            ipos[-1].update(maxQibSh=bse[key], maxQibSrc="BSE")
+        elif detail.get("totalOfferedSh"):
+            ipos[-1].update(maxQibSh=detail["totalOfferedSh"], maxQibSrc="ipopremium (estimate)")
     if not ipos:
         sys.exit("no current IPOs parsed; keeping previous gmp.json")
     out = {"source": HOME, "updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "ipos": ipos}

@@ -184,7 +184,8 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
           <div class="f"><label>Net QIB portion (₹ Cr, excl. anchor)</label><input data-k="qibCr" type="number" step="any"></div>
           <div class="f"><label>MF bids in QIB (₹ Cr)</label><input data-k="mfCr" type="number" step="any"></div>
         </div>
-        <div class="hint" style="margin:-4px 0 10px">Net QIB = max QIB application (you get a warning above it, not a cap). With MF bids we use the exact 5% MF reserve take-up; left blank, MFs are assumed to fill the full 5% reserve (usual case).</div>
+        <div class="f"><label>Max QIB bid quantity (shares)</label><input data-k="maxQibSh" type="number"><div class="hint" id="maxSrc"></div></div>
+        <div class="hint" style="margin:-4px 0 10px">Net QIB portion drives the SEBI allotment ratio. Max QIB bid is the exchange's limit per application (warning above it, not a cap). With MF bids we use the exact 5% MF reserve take-up; left blank, MFs are assumed to fill the full 5% reserve (usual case).</div>
         <div class="row2">
           <div class="f"><label>Open</label><input data-k="open" type="date"></div>
           <div class="f"><label>Close</label><input data-k="close" type="date"></div>
@@ -304,7 +305,7 @@ function load(){
 function pickSel(){if(!S.sel||!S.ipos.find(i=>i.id===S.sel))S.sel=S.ipos[0]&&S.ipos[0].id}
 
 /* ---------- live GMP feed (gmp.json, refreshed from ipopremium.in by a GitHub Action) ---------- */
-const FEED_KEYS=['name','exch','priceLow','priceHigh','lot','gmp','issueCr','open','close','allot','listing','subs','qibCr','mfCr'];
+const FEED_KEYS=['name','exch','priceLow','priceHigh','lot','gmp','issueCr','open','close','allot','listing','subs','qibCr','mfCr','maxQibSh','maxQibSrc'];
 let feed=null;
 async function sync(){
   try{
@@ -344,13 +345,13 @@ function apply(ipo,amount){
   const price=n(ipo.priceHigh), lot=n(ipo.lot), gmp=n(ipo.gmp);
   const lotCost=price*lot;
   const lots=lotCost>0?Math.floor(amount/lotCost):0;
-  // max QIB application = net QIB portion (from ipopremium / editable); shown as a check, never enforced
-  const maxQib=n(ipo.qibCr)>0?n(ipo.qibCr)*1e7:0, maxQibLots=maxQib&&lotCost?Math.floor(maxQib/lotCost):0;
+  // max QIB application = exchange's "Maximum Bid Quantity for QIB" (NSE/BSE) × upper band; a check, never enforced
+  const maxQibSh=n(ipo.maxQibSh), maxQib=maxQibSh*price, maxQibLots=lot?Math.floor(maxQibSh/lot):0;
   const shares=lots*lot, applied=shares*price;
   // SEBI ICDR Sch. XIV: 5% of net QIB is reserved for MFs. r = MF reserve actually taken up, as a fraction of net QIB
   // (MF bids ÷ net QIB, capped at 5%; assume the full 5% when MF bids are not entered).
   const r=n(ipo.qibCr)>0&&String(ipo.mfCr??'')!==''?Math.min(n(ipo.mfCr)/n(ipo.qibCr),0.05):0.05;
-  return {price,lot,gmp,lotCost,lots,shares,applied,left:amount-applied,maxQib,maxQibLots,over:maxQib>0&&applied>maxQib,r,
+  return {price,lot,gmp,lotCost,lots,shares,applied,left:amount-applied,maxQib,maxQibSh,maxQibLots,maxQibSrc:(ipo.edited||[]).includes('maxQibSh')?'your entry':(ipo.maxQibSrc||(maxQibSh?'your entry':'')),over:maxQib>0&&applied>maxQib,r,
     sme:/sme/i.test(ipo.exch||''),netQibSh:n(ipo.qibCr)>0&&price?Math.floor(n(ipo.qibCr)*1e7/price):0,
     gmpPct:price?gmp/price*100:0,listPrice:price+gmp,maxProfit:shares*gmp};
 }
@@ -407,8 +408,9 @@ function renderCalc(){
     ['Profit if fully allotted',inr(a.maxProfit),'at 1x or below'],
     ['Live QIB subscription',ipo.subs?num(n(ipo.subs),2)+'x':'—',ipo.subs>0?'profit ≈ '+inr(allot(a,ipo.subs).profit):'enter in IPO details']
   ].map(k=>`<div class="kpi${k[3]?' hl':''}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
-  $('#qibWarn').innerHTML=!a.maxQib?'':`<div class="qw${a.over?' bad':''}">${a.over?'⚠ ':''}<b>Max QIB application: ${inr(a.maxQib)}</b> (net QIB portion, ${num(a.maxQibLots)} lots${liveOf(ipo)&&!(ipo.edited||[]).includes('qibCr')?', from ipopremium':''}).
-    ${a.over?`Your application of ${inr(a.applied)} is above it by ${inr(a.applied-a.maxQib)} — a QIB bid normally cannot exceed the net QIB portion. Figures below are still calculated on your full amount; verify the QIB size in the RHP / NSE / BSE.`:`Your application is within it.`}</div>`;
+  $('#maxSrc').textContent=a.maxQibSrc?'Source: '+a.maxQibSrc+(/estimate/.test(a.maxQibSrc)?' — not yet published by NSE/BSE, verify in RHP':''):'Not published yet — enter from NSE/BSE issue page or RHP';
+  $('#qibWarn').innerHTML=!a.maxQib?`<div class="qw">Max QIB bid quantity not available yet — enter it in IPO details from the NSE/BSE issue page.</div>`:`<div class="qw${a.over?' bad':''}">${a.over?'⚠ ':''}<b>Max QIB application: ${inr(a.maxQib)}</b> = ${num(a.maxQibSh)} shares (${num(a.maxQibLots)} lots) × ₹${num(a.price,2)} · source: ${esc(a.maxQibSrc)}.
+    ${a.over?`Your application of ${inr(a.applied)} is above it by ${inr(a.applied-a.maxQib)}. Figures below are still calculated on your full amount — please verify.`:`Your application is within it.`}</div>`;
   $('#tPrice').textContent=num(a.price,2); $('#tGmp').textContent=num(a.gmp,2);
   const rows=xs().map(x=>allot(a,x));
   const live=n(ipo.subs)>0?allot(a,ipo.subs):null;
@@ -468,7 +470,7 @@ function cmpMetrics(){
     ['Lots applied',r=>num(r.a.lots),r=>num(r.a.lots)],
     ['Shares applied',r=>num(r.a.shares),r=>num(r.a.shares)],
     ['Amount applied (blocked)',r=>`<b>${inr(r.a.applied)}</b>${r.a.over?'<div class="lot" style="color:var(--red)">⚠ above max QIB application</div>':''}`,r=>rs(r.a.applied)+(r.a.over?' (above max QIB!)':'')],
-    ['Max QIB application (net QIB)',r=>r.a.maxQib?`${inr(r.a.maxQib)}<div style="font-size:.66rem;color:var(--muted)">${num(r.a.maxQibLots)} lots</div>`:'—',r=>r.a.maxQib?`${rs(r.a.maxQib)} (${num(r.a.maxQibLots)} lots)`:'-'],
+    ['Max QIB application',r=>r.a.maxQib?`${inr(r.a.maxQib)}<div style="font-size:.66rem;color:var(--muted)">${num(r.a.maxQibSh)} sh · ${num(r.a.maxQibLots)} lots · ${esc(r.a.maxQibSrc)}</div>`:'— (not published)',r=>r.a.maxQib?`${rs(r.a.maxQib)} (${num(r.a.maxQibLots)} lots, ${r.a.maxQibSrc})`:'-'],
     ['§','Assumptions (pre-filled, editable)'],
     ['QIB subscription (x)',r=>`<input class="sm" type="number" step="any" data-cs="${r.ipo.id}" value="${n(r.ipo.subs)}">`,r=>num(r.r.x,2)+'x'],
     ['GMP (₹ / share)',r=>`<input class="sm" type="number" step="any" data-cg="${r.ipo.id}" value="${n(r.ipo.gmp)}">`,r=>rs(r.a.gmp,2)],
