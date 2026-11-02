@@ -5,6 +5,9 @@ on:
     # every 30 min, 09:00-19:30 IST (03:30-14:00 UTC), Mon-Sat
     - cron: "0,30 4-14 * * 1-6"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["scripts/**", ".github/workflows/gmp.yml"]
 
 permissions:
   contents: write

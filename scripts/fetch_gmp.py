@@ -10,6 +10,7 @@ import http.cookiejar
 import json
 import re
 import sys
+import time
 import urllib.parse
 import urllib.request
 
@@ -50,6 +51,35 @@ def mdate(s, ref):
     return d.isoformat()
 
 
+def qib_details(url):
+    """QIB subscription (x), net QIB offered (Rs Cr) and MF demand (Rs Cr) from the IPO page's
+    'Subscription Demand (in Rs crore)' table. Returns {} when the table is not there yet."""
+    try:
+        page = get(url)
+    except Exception as e:  # one bad page should not sink the whole run
+        print(f"skip {url}: {e}")
+        return {}
+    i = page.find("Subscription Demand")
+    if i < 0:
+        return {}
+    table = page[i:page.find("</table>", i)]
+    rows = {}
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", table, re.S):
+        cells = [text(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
+        if len(cells) >= 4:
+            rows[cells[0].upper()] = cells
+    out = {}
+    if "QIB" in rows:
+        _, offered, _, times = rows["QIB"][:4]
+        if times not in ("", "-"):
+            out["subs"] = num(times)
+        if offered not in ("", "-"):
+            out["qibCr"] = num(offered)
+    if "MF" in rows and rows["MF"][2] not in ("", "-"):
+        out["mfCr"] = num(rows["MF"][2])
+    return out
+
+
 def main():
     page = get(HOME)
     m = re.search(r'ajax:\s*\{\s*url:\s*"([^"]+)"', page)
@@ -72,6 +102,9 @@ def main():
         prem = d.get("premium") or ""
         gmp = num(text(prem).split()[0] if text(prem) else "")
         price_hi = float(d.get("max_price") or 0)
+        link = re.search(r'href="([^"]+/view/ipo/[^"]+)"', name_html)
+        detail = qib_details(html.unescape(link.group(1))) if link else {}
+        time.sleep(1)
         ipos.append({
             "src": d.get("id"),
             "name": text(re.sub(r'<span class="hm-name__chips">.*', "", name_html)),
@@ -87,6 +120,9 @@ def main():
             "close": close.isoformat() if close else "",
             "allot": mdate(d.get("allotment_date"), close),
             "listing": mdate(d.get("listing_date"), close),
+            "subs": detail.get("subs", 0),
+            "qibCr": detail.get("qibCr", ""),
+            "mfCr": detail.get("mfCr", ""),
         })
     if not ipos:
         sys.exit("no current IPOs parsed; keeping previous gmp.json")

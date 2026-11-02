@@ -233,7 +233,7 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
     <div class="cmpbar">
       <div><label>Amount available (₹)</label><input id="cAmount" class="big" inputmode="numeric"></div>
       <div><label>Set the same x for all IPOs (optional)</label><input id="cSubs" type="number" step="any" placeholder="e.g. 100"></div>
-      <div><button class="btn t" id="cReset" style="width:100%">↺ Reset GMP to live</button></div>
+      <div><button class="btn t" id="cReset" style="width:100%">↺ Reset x &amp; GMP to live</button></div>
       <div><button class="btn g" id="cPdf">⬇ Comparison PDF</button></div>
     </div>
   </div>
@@ -285,7 +285,7 @@ function load(){
 function pickSel(){if(!S.sel||!S.ipos.find(i=>i.id===S.sel))S.sel=S.ipos[0]&&S.ipos[0].id}
 
 /* ---------- live GMP feed (gmp.json, refreshed from ipopremium.in by a GitHub Action) ---------- */
-const FEED_KEYS=['name','exch','priceLow','priceHigh','lot','gmp','issueCr','open','close','allot','listing'];
+const FEED_KEYS=['name','exch','priceLow','priceHigh','lot','gmp','issueCr','open','close','allot','listing','subs','qibCr','mfCr'];
 let feed=null;
 async function sync(){
   try{
@@ -300,9 +300,9 @@ async function sync(){
   }
   for(const f of feed.ipos){
     const ipo=S.ipos.find(i=>i.src===f.src);
-    if(ipo){const ed=ipo.edited||[];FEED_KEYS.forEach(k=>{if(!ed.includes(k))ipo[k]=f[k]});ipo.status=f.status}
+    if(ipo){const ed=ipo.edited||[];FEED_KEYS.forEach(k=>{if(!ed.includes(k)&&k in f)ipo[k]=f[k]});ipo.status=f.status}
     else if((f.status==='open'||f.status==='upcoming')&&!S.removed.includes(f.src))
-      S.ipos.push({...Object.fromEntries(FEED_KEYS.map(k=>[k,f[k]])),src:f.src,status:f.status,subs:0,qibCr:'',id:uid(),inc:true,edited:[]});
+      S.ipos.push({subs:0,qibCr:'',mfCr:'',...Object.fromEntries(FEED_KEYS.filter(k=>k in f).map(k=>[k,f[k]])),src:f.src,status:f.status,id:uid(),inc:true,edited:[]});
   }
   S.fresh=false;pickSel();save();
   const t=new Date(feed.updated);
@@ -660,12 +660,12 @@ function bind(){
   $('#pdfBtn').onclick=ipoPdf;
   $('#syncBtn').onclick=sync;
   $('#resetLive').onclick=()=>{const ipo=cur();ipo.edited=[];sync()};
-  $('#cSubs').addEventListener('change',e=>{if(e.target.value==='')return;S.ipos.forEach(i=>i.subs=n(e.target.value));save();renderCmp();fillForm();renderCalc()});
-  $('#cReset').onclick=()=>{S.ipos.forEach(i=>{i.edited=(i.edited||[]).filter(k=>k!=='gmp')});$('#cSubs').value='';sync()};
+  $('#cSubs').addEventListener('change',e=>{if(e.target.value==='')return;S.ipos.forEach(i=>{i.subs=n(e.target.value);markEdited(i,'subs')});save();renderCmp();fillForm();renderCalc()});
+  $('#cReset').onclick=()=>{S.ipos.forEach(i=>{i.edited=(i.edited||[]).filter(k=>k!=='gmp'&&k!=='subs')});$('#cSubs').value='';sync()};
   $('#ctbl').addEventListener('change',e=>{const t=e.target;let ipo;
     if(t.dataset.inc){ipo=S.ipos.find(i=>i.id===t.dataset.inc);ipo.inc=t.checked}
     if(t.dataset.cg){ipo=S.ipos.find(i=>i.id===t.dataset.cg);ipo.gmp=n(t.value);markEdited(ipo,'gmp')}
-    if(t.dataset.cs){ipo=S.ipos.find(i=>i.id===t.dataset.cs);ipo.subs=n(t.value)}
+    if(t.dataset.cs){ipo=S.ipos.find(i=>i.id===t.dataset.cs);ipo.subs=n(t.value);markEdited(ipo,'subs')}
     save();renderCmp();fillForm();renderCalc()});
   $('#cPdf').onclick=cmpPdf;
   $('#addIpo').onclick=()=>{const t=new Date().toISOString().slice(0,10);
