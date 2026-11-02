@@ -79,6 +79,18 @@ input:focus,select:focus{border-color:var(--teal)}
 .step small{display:block;color:var(--muted);font-size:.7rem;margin-top:2px}
 .step b.r{font-size:.95rem;white-space:nowrap}
 .step.fin{background:var(--green-soft);border-color:#bfe6cf}.step.fin:before{background:var(--green)}
+.vt th,.vt td{text-align:right}
+.vt td:first-child,.vt th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:#fff;min-width:170px;font-weight:600}
+.vt th:first-child{background:var(--ink)}
+.vt th{white-space:normal;min-width:140px;vertical-align:top;text-transform:none;letter-spacing:0;font-size:.78rem}
+.vt th small{display:block;font-weight:500;color:#cbd5d1;font-size:.66rem;margin-top:2px}
+.vt tr.sec td{background:var(--teal-soft)!important;color:#0e7490;font-size:.66rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700}
+.vt tr.yl td{background:#fff7e6!important;font-size:.95rem;font-weight:800}
+.vt td.best,.vt th.best{box-shadow:inset 0 0 0 2px var(--green)}
+.vt td.best{background:var(--green-soft)!important}
+.vt input.sm{width:100px}
+.vt th label{display:inline-flex;gap:4px;align-items:center}
+@media(max-width:600px){.vt td:first-child,.vt th:first-child{min-width:118px}.vt th{min-width:120px}}
 .lot{font-size:.62rem;color:var(--amber);font-weight:700}
 .tbl input.x{width:70px;padding:5px 7px;font-weight:700;text-align:right}
 .profit{font-weight:800;color:var(--green-dark)}
@@ -220,15 +232,19 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
     <h2>Compare all IPOs on one amount</h2>
     <div class="cmpbar">
       <div><label>Amount available (₹)</label><input id="cAmount" class="big" inputmode="numeric"></div>
-      <div><label>Assumed QIB subscription (x) for all</label><input id="cSubs" type="number" step="any"></div>
-      <div><label>Use each IPO's own live x?</label>
-        <div class="toggle" id="cMode"><button data-m="common">Common x</button><button data-m="own">Own x</button></div></div>
+      <div><label>Set the same x for all IPOs (optional)</label><input id="cSubs" type="number" step="any" placeholder="e.g. 100"></div>
+      <div><button class="btn t" id="cReset" style="width:100%">↺ Reset GMP to live</button></div>
       <div><button class="btn g" id="cPdf">⬇ Comparison PDF</button></div>
     </div>
   </div>
   <div class="card">
-    <div class="tblwrap"><table class="tbl" id="ctbl"></table></div>
-    <div class="note">Tick the IPOs to include in the PDF. You can edit GMP and subscription (x) right in the table; changes save to that IPO. Best profit is highlighted.</div>
+    <h2>Side-by-side comparison — yield at your x and GMP</h2>
+    <div class="tblwrap"><table class="tbl vt" id="ctbl"></table></div>
+    <div class="note">Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted; tick IPOs to include them in the PDF.</div>
+  </div>
+  <div class="card">
+    <h2>Yield at X subscription — each IPO at its GMP</h2>
+    <div class="tblwrap"><table class="tbl vt" id="ytbl"></table></div>
   </div>
 </section>
 
@@ -407,24 +423,60 @@ function renderWorking(ipo,a,w){
 }
 
 /* ---------- compare view ---------- */
+// days funds stay blocked: issue close → allotment (unblock), both days counted
+function blockedDays(ipo){const c=Date.parse(ipo.close),al=Date.parse(ipo.allot);return isFinite(c)&&isFinite(al)?Math.max(1,Math.round((al-c)/864e5)+1):3}
 function cmpRows(){
   const amount=n(S.amount);
-  return S.ipos.map(ipo=>{const a=apply(ipo,amount);const x=S.cMode==='own'?n(ipo.subs):n(S.cSubs);return {ipo,a,r:allot(a,x)}});
+  return S.ipos.map(ipo=>{const a=apply(ipo,amount),r=allot(a,n(ipo.subs)),d=blockedDays(ipo);
+    return {ipo,a,r,days:d,ann:r.roi*365/d}});
 }
+// metric rows for the vertical comparison: [label, cell(row) → html, pdf text]
+function cmpMetrics(){
+  const lotNote=r=>r.r.lottery?` (${num(r.r.lottery*100,1)}% lottery for 1 lot)`:'';
+  return [
+    ['§','Issue'],
+    ['Exchange',r=>esc(r.ipo.exch),r=>r.ipo.exch],
+    ['Closes / allotment',r=>`${dt(r.ipo.close)} → ${dt(r.ipo.allot)}`,r=>`${dt(r.ipo.close)} > ${dt(r.ipo.allot)}`],
+    ['Upper price band',r=>inr(r.a.price,2),r=>rs(r.a.price,2)],
+    ['Lot size (lot value)',r=>`${num(r.a.lot)} (${inr(r.a.lotCost)})`,r=>`${num(r.a.lot)} (${rs(r.a.lotCost)})`],
+    ['§','Your application'],
+    ['Lots applied',r=>num(r.a.lots),r=>num(r.a.lots)],
+    ['Shares applied',r=>num(r.a.shares),r=>num(r.a.shares)],
+    ['Amount applied (blocked)',r=>`<b>${inr(r.a.applied)}</b>`,r=>rs(r.a.applied)],
+    ['§','Assumptions (pre-filled, editable)'],
+    ['QIB subscription (x)',r=>`<input class="sm" type="number" step="any" data-cs="${r.ipo.id}" value="${n(r.ipo.subs)}">`,r=>num(r.r.x,2)+'x'],
+    ['GMP (₹ / share)',r=>`<input class="sm" type="number" step="any" data-cg="${r.ipo.id}" value="${n(r.ipo.gmp)}">`,r=>rs(r.a.gmp,2)],
+    ['GMP % (listing gain)',r=>num(r.a.gmpPct,2)+'%',r=>num(r.a.gmpPct,2)+'%'],
+    ['§','SEBI allotment'],
+    ['Allotment ratio',r=>pct(r.r.ratio),r=>pct(r.r.ratio)],
+    ['Proportionate shares',r=>num(r.r.raw,2),r=>num(r.r.raw,2)],
+    ['Final shares allotted',r=>`<b>${num(r.r.sh)}</b>${r.r.lottery?`<div class="lot">${num(r.r.lottery*100,1)}% lottery</div>`:''}`,r=>num(r.r.sh)+lotNote(r)],
+    ['Final lots allotted',r=>`<b>${num(r.r.lots,2)}</b>`,r=>num(r.r.lots,2)],
+    ['Allotted value',r=>inr(r.r.amt),r=>rs(r.r.amt)],
+    ['Refund / unblocked',r=>inr(r.r.refund),r=>rs(r.r.refund)],
+    ['§','Returns'],
+    ['Expected profit',r=>`<span class="profit${r.r.profit<0?' neg':''}">${inr(r.r.profit)}</span>`,r=>rs(r.r.profit)],
+    ['YIELD on amount applied',r=>num(r.r.roi,2)+'%',r=>num(r.r.roi,2)+'%','yl'],
+    ['Funds blocked (days)',r=>r.days,r=>String(r.days)],
+    ['Annualised yield',r=>num(r.ann,1)+'%',r=>num(r.ann,1)+'%'],
+    ['Rank by yield',r=>'#'+r.rank,r=>'#'+r.rank]
+  ];
+}
+function rankRows(rows){[...rows].sort((p,q)=>q.r.roi-p.r.roi).forEach((r,i)=>r.rank=i+1);return rows}
 function renderCmp(){
   if(document.activeElement!==$('#cAmount'))$('#cAmount').value=num(n(S.amount));
-  if(document.activeElement!==$('#cSubs'))$('#cSubs').value=S.cSubs;
-  $$('#cMode button').forEach(b=>b.classList.toggle('active',b.dataset.m===S.cMode));
-  const rows=cmpRows(); const best=Math.max(...rows.filter(r=>r.ipo.inc).map(r=>r.r.profit),-Infinity);
-  $('#ctbl').innerHTML=`<thead><tr><th>PDF</th><th style="text-align:left">IPO</th><th>Upper band</th><th>Lot</th><th>GMP ₹</th><th>GMP %</th><th>Lots</th><th>Shares</th><th>Applied</th><th>Sub. x</th><th>Shares allotted</th><th>Lots allotted</th><th>Allotted value</th><th>Profit</th><th>Return</th></tr></thead><tbody>${
-    rows.map(({ipo,a,r})=>`<tr class="${ipo.inc&&r.profit===best&&best>0?'best':''}">
-      <td><input type="checkbox" class="chk" data-inc="${ipo.id}" ${ipo.inc?'checked':''}></td>
-      <td><b>${esc(ipo.name)}</b><br><span style="font-size:.68rem;color:var(--muted)">${esc(ipo.exch)} · closes ${dt(ipo.close)}</span></td>
-      <td>₹${num(a.price,2)}</td><td>${num(a.lot)}</td>
-      <td><input class="sm" data-cg="${ipo.id}" value="${ipo.gmp}"></td><td>${num(a.gmpPct,2)}%</td>
-      <td>${num(a.lots)}</td><td>${num(a.shares)}</td><td>${inr(a.applied)}</td>
-      <td>${S.cMode==='own'?`<input class="sm" data-cs="${ipo.id}" value="${ipo.subs}">`:num(r.x,2)+'x'}</td>
-      <td><b>${num(r.sh)}</b>${r.lottery?`<div class="lot">${num(r.lottery*100,1)}% lottery</div>`:''}</td><td>${num(r.lots,2)}</td><td>${inr(r.amt)}</td><td class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</td><td>${num(r.roi,2)}%</td></tr>`).join('')
+  const rows=rankRows(cmpRows());
+  const best=Math.max(...rows.filter(r=>r.ipo.inc).map(r=>r.r.roi),-Infinity);
+  const isBest=r=>r.ipo.inc&&r.r.roi===best&&best>0;
+  $('#ctbl').innerHTML=`<thead><tr><th>Metric</th>${rows.map(r=>`<th class="${isBest(r)?'best':''}">${esc(r.ipo.name)}<small>${esc(r.ipo.exch)}${r.ipo.status?' · '+esc(r.ipo.status):''}</small><label style="color:#fff;font-weight:500;font-size:.66rem;margin-top:6px"><input type="checkbox" class="chk" data-inc="${r.ipo.id}" ${r.ipo.inc?'checked':''}> in PDF</label></th>`).join('')}</tr></thead><tbody>${
+    cmpMetrics().map(m=>m[0]==='§'?`<tr class="sec"><td colspan="${rows.length+1}">${m[1]}</td></tr>`
+      :`<tr class="${m[3]||''}"><td>${m[0]}</td>${rows.map(r=>`<td class="${m[3]==='yl'&&isBest(r)?'best':''}">${m[1](r)}</td>`).join('')}</tr>`).join('')
+  }</tbody>`;
+  // yield-at-x matrix: rows = x levels, columns = IPOs
+  const xv=xs();
+  $('#ytbl').innerHTML=`<thead><tr><th>QIB subscription</th>${rows.map(r=>`<th>${esc(r.ipo.name)}<small>GMP ₹${num(r.a.gmp,2)} (${num(r.a.gmpPct,2)}%)</small></th>`).join('')}</tr></thead><tbody>${
+    xv.map(x=>{const cells=rows.map(r=>allot(r.a,x));const bx=Math.max(...cells.filter((c,i)=>rows[i].ipo.inc).map(c=>c.roi));
+      return `<tr><td>${num(x,2)}x</td>${cells.map((c,i)=>`<td class="${rows[i].ipo.inc&&c.roi===bx&&bx>0?'best':''}"><b>${num(c.roi,2)}%</b><div style="font-size:.66rem;color:var(--muted)">${inr(c.profit)} · ${num(c.sh)} sh</div></td>`).join('')}</tr>`}).join('')
   }</tbody>`;
 }
 
@@ -531,41 +583,57 @@ function ipoPdf(){
 function cmpPdf(){
   const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
   const W=297,H=210; const amount=n(S.amount);
-  const rows=cmpRows().filter(r=>r.ipo.inc); if(!rows.length){alert('Tick at least one IPO');return}
-  pdfHeader(doc,W,'IPO Comparison Report',`FUNDS AVAILABLE: ${rs(amount)} (Rs. ${words(amount).toUpperCase()})  |  ${S.cMode==='own'?'EACH IPO AT ITS OWN LIVE QIB SUBSCRIPTION':'ALL IPOs AT '+num(n(S.cSubs),2)+'x QIB SUBSCRIPTION'}`);
-  const sorted=[...rows].sort((p,q)=>q.r.profit-p.r.profit);
-  const best=sorted[0];
-  const bw=(W-28-9)/4,bh=23,y=34;
+  const rows=rankRows(cmpRows()).filter(r=>r.ipo.inc); if(!rows.length){alert('Tick at least one IPO');return}
+  pdfHeader(doc,W,'IPO Comparison Report',`FUNDS AVAILABLE: ${rs(amount)} (Rs. ${words(amount).toUpperCase()})  |  EACH IPO AT ITS CURRENT / ASSUMED QIB SUBSCRIPTION AND GMP  |  SEBI QIB ALLOTMENT`);
+  const sorted=[...rows].sort((p,q)=>q.r.roi-p.r.roi);
+  const best=sorted[0], bestProfit=[...rows].sort((p,q)=>q.r.profit-p.r.profit)[0];
+  const short=s=>s.length>22?s.slice(0,21)+'…':s;
+  const bw=(W-28-9)/4,bh=23;let y=34;
   kpiBox(doc,14,y,bw,bh,'Funds available',rs(amount),'Rs. '+words(amount));
-  kpiBox(doc,14+(bw+3),y,bw,bh,'IPOs compared',String(rows.length),'ranked by expected profit');
-  kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Top pick by profit',best.ipo.name.length>22?best.ipo.name.slice(0,21)+'…':best.ipo.name,'GMP '+num(best.a.gmpPct,2)+'%',true);
-  kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Top expected profit',rs(best.r.profit),'at '+num(best.r.x,2)+'x subscription',true);
-  doc.autoTable({startY:y+bh+6,margin:{left:14,right:14},theme:'plain',
-    head:[['#','IPO','Exchange','Closes','Upper band','Lot','GMP','GMP %','Lots','Shares','Applied','Sub. x','Shares allotted','Lots allotted','Allotted value','Profit','Return']],
-    body:sorted.map(({ipo,a,r},i)=>[i+1,ipo.name,ipo.exch,dt(ipo.close),rs(a.price,2),num(a.lot),rs(a.gmp,2),num(a.gmpPct,2)+'%',num(a.lots),num(a.shares),rs(a.applied),num(r.x,2)+'x',num(r.sh)+(r.lottery?' *':''),num(r.lots,2),rs(r.amt),rs(r.profit),num(r.roi,2)+'%']),
-    headStyles:{fillColor:C.ink,textColor:255,fontSize:7,fontStyle:'bold',halign:'right'},
-    styles:{fontSize:7.4,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2},cellWidth:'wrap'},
-    columnStyles:{1:{halign:'left',fontStyle:'bold',cellWidth:'auto'},2:{halign:'left'},3:{halign:'left'},15:{fontStyle:'bold',textColor:C.gd}},
-    alternateRowStyles:{fillColor:[250,252,251]},
-    didParseCell:d=>{if(d.section==='head'&&d.column.index<4)d.cell.styles.halign='left';
-      if(d.section==='body'&&d.row.index===0)d.cell.styles.fillColor=C.soft;}
-  });
-  // profit-at-x matrix
-  const xv=xs().slice(0,10);
-  const yy=doc.lastAutoTable.finalY+8;
-  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...C.ink);
-  doc.text('Expected profit at X subscription — side by side',14,yy);
-  const mat=sorted.map(({ipo,a})=>[ipo.name,...xv.map(x=>rs(allot(a,x).profit))]);
-  const colMax=xv.map((x,j)=>Math.max(...sorted.map(s=>allot(s.a,x).profit)));
-  doc.autoTable({startY:yy+3,margin:{left:14,right:14},theme:'plain',
-    head:[['IPO',...xv.map(x=>num(x)+'x')]],body:mat,
-    headStyles:{fillColor:C.green,textColor:255,fontSize:7,fontStyle:'bold',halign:'right'},
-    styles:{fontSize:7.4,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
-    columnStyles:{0:{halign:'left',fontStyle:'bold'}},
-    didParseCell:d=>{if(d.section==='head'&&d.column.index===0)d.cell.styles.halign='left';
-      if(d.section==='body'&&d.column.index>0){const v=allot(sorted[d.row.index].a,xv[d.column.index-1]).profit;
-        if(v===colMax[d.column.index-1]&&v>0){d.cell.styles.fillColor=C.soft;d.cell.styles.fontStyle='bold';d.cell.styles.textColor=C.gd}}}
-  });
+  kpiBox(doc,14+(bw+3),y,bw,bh,'IPOs compared',String(rows.length),'columns ranked by yield');
+  kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Best yield',num(best.r.roi,2)+'%',short(best.ipo.name)+' at '+num(best.r.x,2)+'x',true);
+  kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Highest profit',rs(bestProfit.r.profit),short(bestProfit.ipo.name),true);
+  y+=bh+6;
+  // vertical comparison: metrics down, IPOs across (6 IPOs per block)
+  const metrics=cmpMetrics(), per=6;
+  for(let k=0;k<sorted.length;k+=per){
+    const grp=sorted.slice(k,k+per);
+    if(k>0){doc.addPage();y=20}
+    const body=[],secRows=new Set(),ylRow={i:-1};
+    metrics.forEach(m=>{if(m[0]==='§'){secRows.add(body.length);body.push([{content:m[1].replace(' (pre-filled, editable)',' (current x & GMP unless changed)').toUpperCase(),colSpan:grp.length+1}])}
+      else{if(m[3]==='yl')ylRow.i=body.length;body.push([m[0].replace('₹','Rs.'),...grp.map(r=>m[2](r))])}});
+    doc.autoTable({startY:y,margin:{left:14,right:14},theme:'plain',
+      head:[['Metric',...grp.map(r=>short(r.ipo.name)+'\n'+r.ipo.exch)]],body,
+      headStyles:{fillColor:C.ink,textColor:255,fontSize:7.4,fontStyle:'bold',halign:'right',valign:'top'},
+      styles:{fontSize:7,cellPadding:{top:0.85,bottom:0.85,left:2,right:2},halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
+      columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:48}},
+      didParseCell:d=>{if(d.column.index===0&&d.section==='head')d.cell.styles.halign='left';
+        if(d.section!=='body')return;
+        if(secRows.has(d.row.index)){d.cell.styles.fillColor=[228,247,250];d.cell.styles.textColor=[14,116,144];d.cell.styles.fontSize=6.6;d.cell.styles.fontStyle='bold';d.cell.styles.halign='left'}
+        if(d.row.index===ylRow.i){d.cell.styles.fillColor=C.amber;d.cell.styles.fontStyle='bold';d.cell.styles.fontSize=8.6;d.cell.styles.cellPadding=1.6;
+          if(d.column.index>0&&grp[d.column.index-1]===best){d.cell.styles.fillColor=C.soft;d.cell.styles.textColor=C.gd}}}
+    });
+  }
+  // yield-at-x matrix: x levels down, IPOs across
+  const xv=xs();
+  for(let k=0;k<sorted.length;k+=per){
+    const grp=sorted.slice(k,k+per);
+    doc.addPage();y=20;
+    doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
+    doc.text('Yield on amount applied at X subscription (profit in brackets)',14,y);
+    const cells=xv.map(x=>grp.map(r=>allot(r.a,x)));
+    const rowMax=cells.map(c=>Math.max(...c.map(v=>v.roi)));
+    doc.autoTable({startY:y+3,margin:{left:14,right:14},theme:'plain',
+      head:[['QIB subscription',...grp.map(r=>short(r.ipo.name)+'\nGMP '+rs(r.a.gmp,2)+' ('+num(r.a.gmpPct,2)+'%)')]],
+      body:xv.map((x,i)=>[num(x,2)+'x',...cells[i].map(c=>`${num(c.roi,2)}%  (${rs(c.profit)})`)]),
+      headStyles:{fillColor:C.green,textColor:255,fontSize:7.4,fontStyle:'bold',halign:'right',valign:'top'},
+      styles:{fontSize:7.6,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
+      columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:32}},alternateRowStyles:{fillColor:[250,252,251]},
+      didParseCell:d=>{if(d.column.index===0&&d.section==='head')d.cell.styles.halign='left';
+        if(d.section==='body'&&d.column.index>0){const v=cells[d.row.index][d.column.index-1].roi;
+          if(v===rowMax[d.row.index]&&v>0){d.cell.styles.fillColor=C.soft;d.cell.styles.fontStyle='bold';d.cell.styles.textColor=C.gd}}}
+    });
+  }
   pdfFooter(doc,W,H);
   doc.save(`IPO_Comparison_${new Date().toISOString().slice(0,10)}.pdf`);
 }
@@ -592,8 +660,8 @@ function bind(){
   $('#pdfBtn').onclick=ipoPdf;
   $('#syncBtn').onclick=sync;
   $('#resetLive').onclick=()=>{const ipo=cur();ipo.edited=[];sync()};
-  $('#cSubs').addEventListener('input',e=>{S.cSubs=n(e.target.value);save();renderCmpKeep(e.target)});
-  $$('#cMode button').forEach(b=>b.onclick=()=>{S.cMode=b.dataset.m;save();renderCmp()});
+  $('#cSubs').addEventListener('change',e=>{if(e.target.value==='')return;S.ipos.forEach(i=>i.subs=n(e.target.value));save();renderCmp();fillForm();renderCalc()});
+  $('#cReset').onclick=()=>{S.ipos.forEach(i=>{i.edited=(i.edited||[]).filter(k=>k!=='gmp')});$('#cSubs').value='';sync()};
   $('#ctbl').addEventListener('change',e=>{const t=e.target;let ipo;
     if(t.dataset.inc){ipo=S.ipos.find(i=>i.id===t.dataset.inc);ipo.inc=t.checked}
     if(t.dataset.cg){ipo=S.ipos.find(i=>i.id===t.dataset.cg);ipo.gmp=n(t.value);markEdited(ipo,'gmp')}
