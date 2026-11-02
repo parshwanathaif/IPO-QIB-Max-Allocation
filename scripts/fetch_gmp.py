@@ -20,6 +20,7 @@ UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like 
 MONTHS = {m: i for i, m in enumerate(
     ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"], 1)}
 
+DIAG = {}  # exchange fetch problems, written into gmp.json for troubleshooting
 opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
 
@@ -75,6 +76,7 @@ def nse_max_qib():
             time.sleep(1)
     except Exception as e:
         print(f"NSE unavailable: {e}")
+        DIAG["nse"] = f"{type(e).__name__}: {e}"[:200]
     print(f"NSE max QIB: {out}")
     return out
 
@@ -95,6 +97,7 @@ def bse_max_qib():
             time.sleep(1)
     except Exception as e:
         print(f"BSE unavailable: {e}")
+        DIAG["bse"] = f"{type(e).__name__}: {e}"[:200]
     print(f"BSE max QIB: {out}")
     return out
 
@@ -194,7 +197,8 @@ def main():
             ipos[-1].update(maxQibSh=detail["totalOfferedSh"], maxQibSrc="ipopremium (estimate)")
     if not ipos:
         sys.exit("no current IPOs parsed; keeping previous gmp.json")
-    out = {"source": HOME, "updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), "ipos": ipos}
+    out = {"source": HOME, "updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+           "exchange": {"nse": len(nse), "bse": len(bse), **DIAG}, "ipos": ipos}
     with open(OUT, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
     print(f"wrote {len(ipos)} IPOs")
