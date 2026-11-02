@@ -89,6 +89,8 @@ input:focus,select:focus{border-color:var(--teal)}
 .vt td.best,.vt th.best{box-shadow:inset 0 0 0 2px var(--green)}
 .vt td.best{background:var(--green-soft)!important}
 .vt input.sm{width:100px}
+.vt input.amt{width:130px;font-weight:700}
+.vt input.amt.own{border-color:var(--teal);background:var(--teal-soft)}
 .pickhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px}
 .btn.sm{padding:6px 10px;font-size:.72rem}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -254,7 +256,7 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
   <div class="card">
     <h2>Side-by-side comparison — yield at your x and GMP</h2>
     <div class="tblwrap"><table class="tbl vt" id="ctbl"></table></div>
-    <div class="note">Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted. Only the IPOs you pick above are shown here and in the PDF.</div>
+    <div class="note">Amount to apply is pre-filled with your bank amount — change it per IPO (clear it to go back to the bank amount). Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted. Only the IPOs you pick above are shown here and in the PDF.</div>
   </div>
   <div class="card">
     <h2>Yield at X subscription — each IPO at its GMP</h2>
@@ -441,7 +443,9 @@ function renderWorking(ipo,a,w){
 function blockedDays(ipo){const c=Date.parse(ipo.close),al=Date.parse(ipo.allot);return isFinite(c)&&isFinite(al)?Math.max(1,Math.round((al-c)/864e5)+1):3}
 function cmpRows(){
   const amount=n(S.amount);
-  return S.ipos.map(ipo=>{const a=apply(ipo,amount),r=allot(a,n(ipo.subs)),d=blockedDays(ipo);
+  // per-IPO application amount overrides the bank amount when set (blank = use bank amount)
+  return S.ipos.map(ipo=>{const own=String(ipo.applyAmt??'')!=='';const a=apply(ipo,own?n(ipo.applyAmt):amount);a.own=own;a.budget=own?n(ipo.applyAmt):amount;
+    const r=allot(a,n(ipo.subs)),d=blockedDays(ipo);
     return {ipo,a,r,days:d,ann:r.roi*365/d}});
 }
 // metric rows for the vertical comparison: [label, cell(row) → html, pdf text]
@@ -454,9 +458,10 @@ function cmpMetrics(){
     ['Upper price band',r=>inr(r.a.price,2),r=>rs(r.a.price,2)],
     ['Lot size (lot value)',r=>`${num(r.a.lot)} (${inr(r.a.lotCost)})`,r=>`${num(r.a.lot)} (${rs(r.a.lotCost)})`],
     ['§','Your application'],
+    ['Amount to apply (₹)',r=>`<input class="sm amt${r.a.own?' own':''}" inputmode="numeric" data-ca="${r.ipo.id}" value="${num(r.a.budget)}" title="Blank = bank amount">${r.a.own?`<div class="lot" style="color:var(--teal);cursor:pointer" data-careset="${r.ipo.id}">custom · ↺ use bank amount</div>`:''}${r.a.own&&r.a.budget>n(S.amount)?'<div class="lot" style="color:var(--red)">more than bank amount</div>':''}`,r=>rs(r.a.budget)+(r.a.own?' (custom)':'')],
     ['Lots applied',r=>num(r.a.lots),r=>num(r.a.lots)],
     ['Shares applied',r=>num(r.a.shares),r=>num(r.a.shares)],
-    ['Amount applied (blocked)',r=>`<b>${inr(r.a.applied)}</b>`,r=>rs(r.a.applied)],
+    ['Amount applied (blocked)',r=>`<b>${inr(r.a.applied)}</b>${r.a.capped?'<div class="lot">capped at net QIB portion</div>':''}`,r=>rs(r.a.applied)+(r.a.capped?' (QIB cap)':'')],
     ['§','Assumptions (pre-filled, editable)'],
     ['QIB subscription (x)',r=>`<input class="sm" type="number" step="any" data-cs="${r.ipo.id}" value="${n(r.ipo.subs)}">`,r=>num(r.r.x,2)+'x'],
     ['GMP (₹ / share)',r=>`<input class="sm" type="number" step="any" data-cg="${r.ipo.id}" value="${n(r.ipo.gmp)}">`,r=>rs(r.a.gmp,2)],
@@ -685,8 +690,11 @@ function bind(){
     if(t.dataset.inc){ipo=S.ipos.find(i=>i.id===t.dataset.inc);ipo.inc=t.checked}
     if(t.dataset.cg){ipo=S.ipos.find(i=>i.id===t.dataset.cg);ipo.gmp=n(t.value);markEdited(ipo,'gmp')}
     if(t.dataset.cs){ipo=S.ipos.find(i=>i.id===t.dataset.cs);ipo.subs=n(t.value);markEdited(ipo,'subs')}
+    if(t.dataset.ca){ipo=S.ipos.find(i=>i.id===t.dataset.ca);const v=t.value.trim();ipo.applyAmt=v===''||n(v)===n(S.amount)?'':n(v)}
     save();renderCmp();fillForm();renderCalc()});
   $('#cPdf').onclick=cmpPdf;
+  $('#ctbl').addEventListener('click',e=>{const b=e.target.closest('[data-careset]');if(!b)return;S.ipos.find(i=>i.id===b.dataset.careset).applyAmt='';save();renderCmp()});
+  $('#ctbl').addEventListener('focusin',e=>{if(e.target.dataset.ca)e.target.select()});
   $('#cPick').onclick=e=>{const b=e.target.closest('[data-inc]');if(!b)return;const ipo=S.ipos.find(i=>i.id===b.dataset.inc);ipo.inc=!ipo.inc;save();renderCmp()};
   $$('[data-pick]').forEach(b=>b.onclick=()=>{const today=new Date().toISOString().slice(0,10);
     S.ipos.forEach(i=>{i.inc=b.dataset.pick==='all'?true:b.dataset.pick==='none'?false:(i.status?i.status==='open':(i.close||'')>=today)});save();renderCmp()});
