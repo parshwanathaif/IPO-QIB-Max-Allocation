@@ -36,13 +36,22 @@ try {
 
 # BSE's API refuses scripted requests (403), so BSE-only issues use the ipopremium figure from gmp.json.
 
-$out = [ordered]@{ updated = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss+00:00'); status = $status; items = $items }
-$json = $out | ConvertTo-Json -Depth 5
-[IO.File]::WriteAllText((Join-Path $root 'exchange.json'), $json, (New-Object Text.UTF8Encoding $false))
 "NSE: $($status.nse)  items: $($items.Count)"
 $items | ForEach-Object { "{0,-4} {1,-45} {2,12:N0}" -f $_.exchange, $_.name, $_.maxQibSh }
 
-if (-not $NoPush -and $items.Count) {
+# rewrite (and publish) only when the figures changed, so the repo doesn't fill with timestamp-only commits
+$path = Join-Path $root 'exchange.json'
+$sig = { param($list) ($list | ForEach-Object { "$($_.key)=$($_.maxQibSh)" } | Sort-Object) -join ';' }
+$old = if (Test-Path $path) { (Get-Content $path -Raw | ConvertFrom-Json).items } else { @() }
+$changed = $items.Count -and ((& $sig $items) -ne (& $sig $old))
+if ($changed) {
+    $out = [ordered]@{ updated = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss+00:00'); status = $status; items = $items }
+    $json = ($out | ConvertTo-Json -Depth 5) -replace "`r`n", "`n"
+    [IO.File]::WriteAllText($path, $json, (New-Object Text.UTF8Encoding $false))
+} else { 'No change in NSE figures.' }
+
+$ErrorActionPreference = 'Continue'  # git writes progress/warnings to stderr; don't treat them as failures
+if (-not $NoPush -and $changed) {
     $git = Join-Path $env:ProgramFiles 'Git\cmd\git.exe'
     Push-Location $root
     try {

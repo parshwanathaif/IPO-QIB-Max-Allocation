@@ -1,5 +1,5 @@
 {
-    "updated":  "2026-11-02T11:00:52+00:00",
+    "updated":  "2026-11-02T11:06:42+00:00",
     "status":  {
                    "nse":  "ok"
                },
@@ -12,18 +12,18 @@
                       "maxQibSh":  16532880
                   },
                   {
-                      "key":  "maxwell engineering",
-                      "name":  "Maxwell Engineering Solutions Limited",
-                      "exchange":  "NSE",
-                      "symbol":  "MAXENGS",
-                      "maxQibSh":  2401600
-                  },
-                  {
                       "key":  "hgs",
                       "name":  "HGS (India) Limited",
                       "exchange":  "NSE",
                       "symbol":  "HGSINDIALT",
                       "maxQibSh":  1921200
+                  },
+                  {
+                      "key":  "maxwell engineering",
+                      "name":  "Maxwell Engineering Solutions Limited",
+                      "exchange":  "NSE",
+                      "symbol":  "MAXENGS",
+                      "maxQibSh":  2401600
                   }
               ]
 }
