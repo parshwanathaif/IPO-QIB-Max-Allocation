@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPO Allotment Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --green:#1fa463; --green-dark:#157a49; --green-soft:#e8f6ee; --teal:#35c4d7; --teal-soft:#e4f7fa;
+  --ink:#1f2430; --muted:#6b7280; --bg:#f4f8f6; --card:#ffffff; --line:#e5eae8;
+  --amber:#d97706; --red:#dc2626; --blue:#2563eb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+header{background:var(--ink);color:#fff;padding:12px 20px;position:sticky;top:0;z-index:50;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+.hwrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.logo{width:44px;height:44px;border-radius:50%;background:var(--green);display:grid;place-items:center;font-weight:800;font-size:1rem}
+.brand h1{font-size:1.12rem;font-weight:800}
+.brand h1 span{color:var(--teal)}
+.brand p{font-size:.68rem;letter-spacing:2.5px;color:#cbd5d1;text-transform:uppercase;margin-top:2px}
+.creator{margin-left:auto;text-align:right}
+.creator .by{font-size:.66rem;color:#9aa5a0;text-transform:uppercase;letter-spacing:1.5px}
+.creator .nm{font-size:.9rem;font-weight:700}
+.toolbar{max-width:1180px;margin:16px auto 0;padding:0 20px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px;flex-wrap:wrap}
+.tab{border:none;background:transparent;padding:8px 14px;border-radius:9px;font-family:inherit;font-size:.83rem;font-weight:600;color:var(--muted);cursor:pointer}
+.tab.active{background:var(--green);color:#fff}
+main{max-width:1180px;margin:14px auto 40px;padding:0 20px}
+.view{display:none}.view.active{display:block}
+.layout{display:grid;grid-template-columns:340px 1fr;gap:16px;align-items:start}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 1px 3px rgba(16,24,40,.04)}
+.card h2{font-size:.78rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);font-weight:700;margin-bottom:12px}
+.card+.card{margin-top:14px}
+label{display:block;font-size:.72rem;font-weight:600;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:10px;font-family:inherit;font-size:.86rem;background:#fff;color:var(--ink);outline:none}
+input:focus,select:focus{border-color:var(--teal)}
+.f{margin-bottom:10px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.big{font-size:1.25rem;font-weight:800;padding:12px 14px;border:2px solid var(--green);background:var(--green-soft)}
+.hint{font-size:.7rem;color:var(--muted);margin-top:4px}
+.btn{border:none;border-radius:10px;padding:10px 14px;font-family:inherit;font-weight:700;font-size:.82rem;cursor:pointer}
+.btn.g{background:var(--green);color:#fff}.btn.g:hover{background:var(--green-dark)}
+.btn.d{background:var(--ink);color:#fff}
+.btn.t{background:var(--teal-soft);color:#0e7490;border:1px solid #c9edf3}
+.btn.r{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.hero h3{font-size:1.25rem;font-weight:800}
+.chip{display:inline-block;font-size:.66rem;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--teal-soft);color:#0e7490;margin-left:6px;vertical-align:middle}
+.dates{display:flex;gap:16px;flex-wrap:wrap;font-size:.75rem;color:var(--muted);margin-top:6px}
+.dates b{color:var(--ink);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfdfc}
+.kpi .l{font-size:.64rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:700}
+.kpi .v{font-size:1.15rem;font-weight:800;margin-top:4px}
+.kpi .s{font-size:.7rem;color:var(--muted);margin-top:2px}
+.kpi.hl{background:var(--ink);border-color:var(--ink);color:#fff}
+.kpi.hl .l,.kpi.hl .s{color:#cbd5d1}
+.kpi.hl .v{color:var(--teal)}
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem}
+.tblwrap{overflow-x:auto}
+.tbl th{background:var(--ink);color:#fff;font-weight:600;font-size:.7rem;text-transform:uppercase;letter-spacing:.8px;padding:9px 8px;text-align:right;white-space:nowrap}
+.tbl th:first-child{text-align:left;border-radius:10px 0 0 0}.tbl th:last-child{border-radius:0 10px 0 0}
+.tbl td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tbl td:first-child{text-align:left}
+.tbl tr:nth-child(even) td{background:#fafcfb}
+.tbl tr.cur td{background:#fff7e6!important;font-weight:700}
+.tbl input.x{width:70px;padding:5px 7px;font-weight:700;text-align:right}
+.profit{font-weight:800;color:var(--green-dark)}
+.neg{color:var(--red)}
+.bar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.bar i{display:block;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--green));min-width:2px}
+.note{font-size:.72rem;color:var(--muted);line-height:1.5;margin-top:10px}
+.toggle{display:flex;gap:6px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px}
+.toggle button{flex:1;border:none;background:transparent;padding:7px 6px;border-radius:8px;font-family:inherit;font-size:.72rem;font-weight:600;color:var(--muted);cursor:pointer}
+.toggle button.active{background:var(--ink);color:#fff}
+.cmpbar{display:grid;grid-template-columns:1.4fr 1fr 1fr auto;gap:10px;align-items:end}
+@media(max-width:700px){.cmpbar{grid-template-columns:1fr}}
+.tbl td input.sm{width:80px;padding:5px 7px;text-align:right}
+.tbl td input.chk{width:auto}
+.best td{background:var(--green-soft)!important}
+.listgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.ipo-card{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+.ipo-card h4{font-size:.95rem;font-weight:800;margin-bottom:6px}
+.ipo-card .m{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:.74rem;color:var(--muted);margin-bottom:10px}
+.ipo-card .m b{color:var(--ink)}
+footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <div class="hwrap">
+    <div class="logo">IPO</div>
+    <div class="brand"><h1>IPO <span>Allotment</span> Planner</h1><p>QIB application &amp; profit desk</p></div>
+    <div class="creator"><div class="by">Report date</div><div class="nm" id="today"></div></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="tabs">
+    <button class="tab active" data-v="calc">Calculator &amp; Report</button>
+    <button class="tab" data-v="cmp">Compare IPOs</button>
+    <button class="tab" data-v="list">Manage IPOs</button>
+  </div>
+  <button class="btn t" id="syncBtn">↻ Refresh GMP</button>
+  <span id="stamp" style="font-size:.72rem;color:var(--muted)"></span>
+</div>
+
+<main>
+<!-- ============ CALCULATOR ============ -->
+<section class="view active" id="v-calc">
+  <div class="layout">
+    <div>
+      <div class="card">
+        <h2>Your funds</h2>
+        <div class="f">
+          <label>Amount available in bank (₹)</label>
+          <input id="amount" class="big" inputmode="numeric">
+          <div class="hint" id="amountWords"></div>
+        </div>
+        <div class="f">
+          <label>Select IPO</label>
+          <select id="ipoSel"></select>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>IPO details (editable)</h2>
+        <div class="f"><label>IPO name</label><input data-k="name"></div>
+        <div class="row2">
+          <div class="f"><label>Exchange / type</label><input data-k="exch"></div>
+          <div class="f"><label>Issue size (₹ Cr)</label><input data-k="issueCr" type="number" step="any"></div>
+        </div>
+        <div class="row3">
+          <div class="f"><label>Price low (₹)</label><input data-k="priceLow" type="number" step="any"></div>
+          <div class="f"><label>Price upper (₹)</label><input data-k="priceHigh" type="number" step="any"></div>
+          <div class="f"><label>Lot (shares)</label><input data-k="lot" type="number"></div>
+        </div>
+        <div class="row2">
+          <div class="f"><label>GMP (₹ per share)</label><input data-k="gmp" type="number" step="any"><div class="hint" id="liveGmp"></div></div>
+          <div class="f"><label>QIB subscription now (x)</label><input data-k="subs" type="number" step="any"></div>
+        </div>
+        <div class="f"><label>QIB portion (₹ Cr) — optional cap</label><input data-k="qibCr" type="number" step="any"><div class="hint">If entered, application is capped at the QIB portion size.</div></div>
+        <div class="row2">
+          <div class="f"><label>Open</label><input data-k="open" type="date"></div>
+          <div class="f"><label>Close</label><input data-k="close" type="date"></div>
+          <div class="f"><label>Allotment</label><input data-k="allot" type="date"></div>
+          <div class="f"><label>Listing</label><input data-k="listing" type="date"></div>
+        </div>
+        <button class="btn t" id="resetLive" style="display:none;width:100%">↺ Discard my edits, use live ipopremium values</button>
+      </div>
+
+      <div class="card">
+        <h2>Table settings</h2>
+        <div class="row3">
+          <div class="f"><label>Start (x)</label><input id="xStart" type="number"></div>
+          <div class="f"><label>Step (x)</label><input id="xStep" type="number"></div>
+          <div class="f"><label>Rows</label><input id="xRows" type="number"></div>
+        </div>
+        <label>Allotment rounding</label>
+        <div class="toggle" id="roundT">
+          <button data-r="exact">Exact shares</button>
+          <button data-r="nearest">Nearest lot</button>
+          <button data-r="down">Lot (floor)</button>
+        </div>
+        <div class="hint">QIB allotment is proportionate: shares applied ÷ subscription (x).</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div class="hero">
+          <div>
+            <h3 id="hName"></h3>
+            <div class="dates" id="hDates"></div>
+          </div>
+          <div class="btns">
+            <button class="btn g" id="pdfBtn">⬇ Download PDF report</button>
+          </div>
+        </div>
+        <div class="kpis" id="kpis"></div>
+      </div>
+
+      <div class="card">
+        <h2>Expected profit at X subscription (QIB) — at upper band ₹<span id="tPrice"></span>, GMP ₹<span id="tGmp"></span></h2>
+        <div class="tblwrap"><table class="tbl" id="ptbl"></table></div>
+        <div class="note" id="tNote"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ COMPARE ============ -->
+<section class="view" id="v-cmp">
+  <div class="card">
+    <h2>Compare all IPOs on one amount</h2>
+    <div class="cmpbar">
+      <div><label>Amount available (₹)</label><input id="cAmount" class="big" inputmode="numeric"></div>
+      <div><label>Assumed QIB subscription (x) for all</label><input id="cSubs" type="number" step="any"></div>
+      <div><label>Use each IPO's own live x?</label>
+        <div class="toggle" id="cMode"><button data-m="common">Common x</button><button data-m="own">Own x</button></div></div>
+      <div><button class="btn g" id="cPdf">⬇ Comparison PDF</button></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="tblwrap"><table class="tbl" id="ctbl"></table></div>
+    <div class="note">Tick the IPOs to include in the PDF. You can edit GMP and subscription (x) right in the table; changes save to that IPO. Best profit is highlighted.</div>
+  </div>
+</section>
+
+<!-- ============ LIST ============ -->
+<section class="view" id="v-list">
+  <div class="card">
+    <h2>IPO list</h2>
+    <div class="btns" style="margin-bottom:14px">
+      <button class="btn g" id="addIpo">+ Add new IPO</button>
+      <button class="btn t" id="expJson">Export list (JSON)</button>
+      <button class="btn t" id="impBtn">Import list</button>
+      <input type="file" id="impFile" accept=".json" hidden>
+    </div>
+    <div class="listgrid" id="listgrid"></div>
+  </div>
+</section>
+</main>
+<footer>For planning only. GMP is an unofficial grey-market indicator and can change; actual allotment is decided by the registrar.</footer>
+
+<script>
+const KEY='ipoPlanner.v1';
+const seed=[
+  {name:'HGS (India)',exch:'NSE SME',priceLow:114,priceHigh:120,lot:1200,gmp:30,subs:4.88,issueCr:34.56,qibCr:'',open:'2026-10-30',close:'2026-11-03',allot:'2026-11-04',listing:'2026-11-06'},
+  {name:'Vedant Poly Fabs',exch:'NSE SME',priceLow:94,priceHigh:94,lot:1200,gmp:15,subs:0,issueCr:56.68,qibCr:'',open:'2026-11-02',close:'2026-11-04',allot:'2026-11-05',listing:'2026-11-09'},
+  {name:'Maxwell Engineering Solutions',exch:'NSE SME',priceLow:158,priceHigh:158,lot:800,gmp:0,subs:0,issueCr:57.64,qibCr:'',open:'2026-10-30',close:'2026-11-03',allot:'2026-11-04',listing:'2026-11-06'},
+  {name:'Johnsoncab Electricals',exch:'BSE SME',priceLow:200,priceHigh:200,lot:600,gmp:5,subs:0.52,issueCr:56.02,qibCr:'',open:'2026-10-30',close:'2026-11-03',allot:'2026-11-04',listing:'2026-11-06'},
+  {name:'Vectras Enprocon',exch:'BSE SME',priceLow:105,priceHigh:105,lot:1200,gmp:0,subs:1.42,issueCr:53.05,qibCr:'',open:'2026-10-30',close:'2026-11-03',allot:'2026-11-04',listing:'2026-11-06'}
+];
+let S;
+function uid(){return Math.random().toString(36).slice(2,9)}
+function load(){
+  try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){S=null}
+  if(!S||!S.ipos){S={amount:5000000,xStart:25,xStep:25,xRows:12,round:'exact',cSubs:100,cMode:'common',ipos:[],sel:null,fresh:true}}
+  S.removed=S.removed||[];
+  pickSel();
+}
+function pickSel(){if(!S.sel||!S.ipos.find(i=>i.id===S.sel))S.sel=S.ipos[0]&&S.ipos[0].id}
+
+/* ---------- live GMP feed (gmp.json, refreshed from ipopremium.in by a GitHub Action) ---------- */
+const FEED_KEYS=['name','exch','priceLow','priceHigh','lot','gmp','issueCr','open','close','allot','listing'];
+let feed=null;
+async function sync(){
+  try{
+    const r=await fetch('gmp.json?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok)throw new Error(r.status);
+    feed=await r.json();
+  }catch(e){
+    feed=null;
+    if(S.fresh&&!S.ipos.length)S.ipos=seed.map(i=>({...i,id:uid(),inc:true}));
+    $('#stamp').textContent='Live GMP unavailable here — values are editable';
+    S.fresh=false;pickSel();save();renderAll();return;
+  }
+  for(const f of feed.ipos){
+    const ipo=S.ipos.find(i=>i.src===f.src);
+    if(ipo){const ed=ipo.edited||[];FEED_KEYS.forEach(k=>{if(!ed.includes(k))ipo[k]=f[k]});ipo.status=f.status}
+    else if((f.status==='open'||f.status==='upcoming')&&!S.removed.includes(f.src))
+      S.ipos.push({...Object.fromEntries(FEED_KEYS.map(k=>[k,f[k]])),src:f.src,status:f.status,subs:0,qibCr:'',id:uid(),inc:true,edited:[]});
+  }
+  S.fresh=false;pickSel();save();
+  const t=new Date(feed.updated);
+  $('#stamp').innerHTML=`GMP from <a href="https://www.ipopremium.in/" target="_blank" rel="noopener" style="color:var(--green-dark)">ipopremium.in</a> · updated ${t.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`;
+  renderAll();
+}
+const liveOf=ipo=>feed&&ipo.src?feed.ipos.find(f=>f.src===ipo.src):null;
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const n=v=>{const x=parseFloat(String(v).replace(/,/g,''));return isFinite(x)?x:0};
+const inr=(v,d=0)=>(v<0?'-':'')+'₹'+Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+const num=(v,d=0)=>v.toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+const rs=(v,d=0)=>(v<0?'-':'')+'Rs. '+Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:d,minimumFractionDigits:d});
+function words(v){if(v>=1e7)return (v/1e7).toFixed(2)+' Crore';if(v>=1e5)return (v/1e5).toFixed(2)+' Lakh';return num(v)}
+function dt(s){if(!s)return '—';const d=new Date(s+'T00:00');return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}
+const cur=()=>S.ipos.find(i=>i.id===S.sel);
+
+/* ---------- core maths ---------- */
+function apply(ipo,amount){
+  const price=n(ipo.priceHigh), lot=n(ipo.lot), gmp=n(ipo.gmp);
+  const lotCost=price*lot;
+  let lots=lotCost>0?Math.floor(amount/lotCost):0, capped=false;
+  if(n(ipo.qibCr)>0&&lotCost>0){const cap=Math.floor(n(ipo.qibCr)*1e7/lotCost);if(lots>cap){lots=cap;capped=true}}
+  const shares=lots*lot, applied=shares*price;
+  return {price,lot,gmp,lotCost,lots,shares,applied,left:amount-applied,capped,
+    gmpPct:price?gmp/price*100:0,listPrice:price+gmp,maxProfit:shares*gmp};
+}
+function allot(a,x,round){
+  x=Math.max(n(x),0);
+  let sh = x<=1 ? a.shares : a.shares/x;
+  if(x>1){
+    if(round==='nearest')sh=Math.round(sh/a.lot)*a.lot;
+    else if(round==='down')sh=Math.floor(sh/a.lot)*a.lot;
+    else sh=Math.floor(sh);
+  }
+  const amt=sh*a.price, profit=sh*a.gmp;
+  return {x,sh,lots:a.lot?sh/a.lot:0,amt,refund:a.applied-amt,profit,
+    roi:a.applied?profit/a.applied*100:0, listVal:sh*a.listPrice};
+}
+function xs(){const r=[];for(let i=0;i<Math.max(1,n(S.xRows));i++)r.push(n(S.xStart)+i*n(S.xStep));return r}
+
+/* ---------- calculator view ---------- */
+function fillForm(){
+  const ipo=cur(); if(!ipo)return;
+  $$('[data-k]').forEach(el=>el.value=ipo[el.dataset.k]??'');
+  const lv=liveOf(ipo), ed=ipo.edited||[];
+  $('#liveGmp').textContent=lv?(ed.includes('gmp')?`Live: ₹${lv.gmp} (you edited)`:`Live from ipopremium (${lv.gmpPct}%)`):'';
+  $('#resetLive').style.display=lv&&ed.length?'block':'none';
+}
+function markEdited(ipo,k){if(!ipo.src)return;ipo.edited=ipo.edited||[];if(!ipo.edited.includes(k))ipo.edited.push(k)}
+function renderSel(){
+  $('#ipoSel').innerHTML=S.ipos.map(i=>`<option value="${i.id}"${i.id===S.sel?' selected':''}>${esc(i.name)} — ₹${i.priceHigh} × ${i.lot}</option>`).join('');
+}
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderCalc(){
+  const ipo=cur(); if(!ipo){$('#hName').textContent='Add an IPO in "Manage IPOs"';return}
+  const amount=n(S.amount), a=apply(ipo,amount);
+  $('#amountWords').textContent='₹ '+words(amount);
+  $('#hName').innerHTML=esc(ipo.name)+`<span class="chip">${esc(ipo.exch)}</span>`;
+  $('#hDates').innerHTML=`<span>Price band <b>₹${ipo.priceLow||ipo.priceHigh}–${ipo.priceHigh}</b></span><span>Lot <b>${num(n(ipo.lot))}</b></span><span>Issue <b>₹${ipo.issueCr||'—'} Cr</b></span><span>Open <b>${dt(ipo.open)}</b></span><span>Close <b>${dt(ipo.close)}</b></span><span>Allotment <b>${dt(ipo.allot)}</b></span><span>Listing <b>${dt(ipo.listing)}</b></span>`;
+  $('#kpis').innerHTML=[
+    ['Max application',inr(a.applied),'₹ '+words(a.applied)+(a.capped?' · capped at QIB portion':''),1],
+    ['Lots applied',num(a.lots),'1 lot = '+inr(a.lotCost)],
+    ['Shares applied',num(a.shares),'@ upper band ₹'+a.price],
+    ['Unused balance',inr(a.left),'stays in bank'],
+    ['GMP',inr(a.gmp)+' / share',num(a.gmpPct,2)+'% over issue price'],
+    ['Est. listing price',inr(a.listPrice,2),'issue price + GMP'],
+    ['Profit if fully allotted',inr(a.maxProfit),'at 1x or below'],
+    ['Live QIB subscription',ipo.subs?num(n(ipo.subs),2)+'x':'—',ipo.subs>0?'profit ≈ '+inr(allot(a,ipo.subs,S.round).profit):'enter in IPO details']
+  ].map(k=>`<div class="kpi${k[3]?' hl':''}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
+  $('#tPrice').textContent=num(a.price,2); $('#tGmp').textContent=num(a.gmp,2);
+  const rows=xs().map(x=>allot(a,x,S.round));
+  const live=n(ipo.subs)>0?allot(a,ipo.subs,S.round):null;
+  const max=Math.max(1,...rows.map(r=>Math.abs(r.profit)),live?Math.abs(live.profit):0);
+  const tr=(r,i,isLive)=>`<tr${isLive?' class="cur"':''}><td>${isLive?num(r.x,2)+'x (live)':`<input class="x" data-i="${i}" value="${r.x}">`}</td>
+    <td>${num(r.sh)}</td><td>${num(r.lots,2)}</td><td>${inr(r.amt)}</td><td>${inr(r.refund)}</td>
+    <td><div class="bar"><i style="width:${Math.round(Math.abs(r.profit)/max*90)}px"></i><span class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</span></div></td>
+    <td>${num(r.roi,2)}%</td></tr>`;
+  $('#ptbl').innerHTML=`<thead><tr><th>Subscription</th><th>Shares allotted</th><th>Lots allotted</th><th>Allotted value</th><th>Refund</th><th>Profit @ GMP</th><th>Return on applied</th></tr></thead><tbody>${live?tr(live,-1,true):''}${rows.map((r,i)=>tr(r,i)).join('')}</tbody>`;
+  $('#tNote').textContent=`Applied ${num(a.shares)} shares (${num(a.lots)} lots) for ${inr(a.applied)}. Allotted shares = shares applied ÷ subscription (x)${S.round==='exact'?'':', rounded to '+(S.round==='nearest'?'nearest':'lower')+' lot'}. Profit = allotted shares × GMP. Edit any x value in the first column.`;
+  $$('#roundT button').forEach(b=>b.classList.toggle('active',b.dataset.r===S.round));
+}
+
+/* ---------- compare view ---------- */
+function cmpRows(){
+  const amount=n(S.amount);
+  return S.ipos.map(ipo=>{const a=apply(ipo,amount);const x=S.cMode==='own'?n(ipo.subs):n(S.cSubs);return {ipo,a,r:allot(a,x,S.round)}});
+}
+function renderCmp(){
+  if(document.activeElement!==$('#cAmount'))$('#cAmount').value=num(n(S.amount));
+  if(document.activeElement!==$('#cSubs'))$('#cSubs').value=S.cSubs;
+  $$('#cMode button').forEach(b=>b.classList.toggle('active',b.dataset.m===S.cMode));
+  const rows=cmpRows(); const best=Math.max(...rows.filter(r=>r.ipo.inc).map(r=>r.r.profit),-Infinity);
+  $('#ctbl').innerHTML=`<thead><tr><th>PDF</th><th style="text-align:left">IPO</th><th>Upper band</th><th>Lot</th><th>GMP ₹</th><th>GMP %</th><th>Lots</th><th>Shares</th><th>Applied</th><th>Sub. x</th><th>Shares allotted</th><th>Allotted value</th><th>Profit</th><th>Return</th></tr></thead><tbody>${
+    rows.map(({ipo,a,r})=>`<tr class="${ipo.inc&&r.profit===best&&best>0?'best':''}">
+      <td><input type="checkbox" class="chk" data-inc="${ipo.id}" ${ipo.inc?'checked':''}></td>
+      <td><b>${esc(ipo.name)}</b><br><span style="font-size:.68rem;color:var(--muted)">${esc(ipo.exch)} · closes ${dt(ipo.close)}</span></td>
+      <td>₹${num(a.price,2)}</td><td>${num(a.lot)}</td>
+      <td><input class="sm" data-cg="${ipo.id}" value="${ipo.gmp}"></td><td>${num(a.gmpPct,2)}%</td>
+      <td>${num(a.lots)}</td><td>${num(a.shares)}</td><td>${inr(a.applied)}</td>
+      <td>${S.cMode==='own'?`<input class="sm" data-cs="${ipo.id}" value="${ipo.subs}">`:num(r.x,2)+'x'}</td>
+      <td>${num(r.sh)}</td><td>${inr(r.amt)}</td><td class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</td><td>${num(r.roi,2)}%</td></tr>`).join('')
+  }</tbody>`;
+}
+
+/* ---------- list view ---------- */
+function renderList(){
+  $('#listgrid').innerHTML=S.ipos.map(i=>`<div class="ipo-card"><h4>${esc(i.name)}<span class="chip">${esc(i.exch)}</span></h4>
+    <div class="m"><span>Band <b>₹${i.priceLow||i.priceHigh}–${i.priceHigh}</b></span><span>Lot <b>${num(n(i.lot))}</b></span>
+    <span>GMP <b>₹${i.gmp||0}</b></span><span>QIB <b>${i.subs||0}x</b></span><span>Opens <b>${dt(i.open)}</b></span><span>Closes <b>${dt(i.close)}</b></span></div>
+    <div class="btns"><button class="btn d" data-open="${i.id}">Open</button><button class="btn t" data-dup="${i.id}">Duplicate</button><button class="btn r" data-del="${i.id}">Remove</button></div></div>`).join('');
+}
+function renderAll(){renderSel();fillForm();renderCalc();renderCmp();renderList()}
+
+/* ---------- PDF: single IPO ---------- */
+const C={ink:[31,36,48],green:[31,164,99],gd:[21,122,73],teal:[53,196,215],muted:[107,114,128],line:[229,234,232],soft:[232,246,238],amber:[255,247,230]};
+function pdfHeader(doc,W,title,sub){
+  doc.setFillColor(...C.ink);doc.rect(0,0,W,26,'F');
+  doc.setFillColor(...C.green);doc.rect(0,26,W,1.2,'F');
+  doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(15);doc.text(title,14,12);
+  doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(203,213,209);doc.text(sub,14,18.5);
+  doc.setFontSize(8);doc.text('Report date',W-14,11,{align:'right'});
+  doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(10);doc.text(new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}),W-14,17,{align:'right'});
+}
+function pdfFooter(doc,W,H){
+  const p=doc.getNumberOfPages();
+  for(let i=1;i<=p;i++){doc.setPage(i);doc.setDrawColor(...C.line);doc.line(14,H-12,W-14,H-12);
+    doc.setFontSize(6.8);doc.setTextColor(...C.muted);doc.setFont('helvetica','normal');
+    doc.text('For planning only. GMP is an unofficial grey-market indicator and can change. Actual allotment is decided by the registrar.',14,H-7.5);
+    doc.text(`Page ${i} of ${p}`,W-14,H-7.5,{align:'right'});}
+}
+function kpiBox(doc,x,y,w,h,label,val,sub,dark){
+  if(dark){doc.setFillColor(...C.ink);doc.roundedRect(x,y,w,h,2.5,2.5,'F')}
+  else{doc.setFillColor(251,253,252);doc.setDrawColor(...C.line);doc.roundedRect(x,y,w,h,2.5,2.5,'FD')}
+  doc.setFont('helvetica','bold');doc.setFontSize(6.5);doc.setTextColor(...(dark?[203,213,209]:C.muted));doc.text(label.toUpperCase(),x+4,y+6);
+  doc.setFontSize(12.5);doc.setTextColor(...(dark?C.teal:C.ink));doc.text(val,x+4,y+13.5);
+  doc.setFont('helvetica','normal');doc.setFontSize(6.8);doc.setTextColor(...(dark?[203,213,209]:C.muted));doc.text(sub,x+4,y+19);
+}
+function ipoPdf(){
+  const ipo=cur(); if(!ipo)return;
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,H=297; const amount=n(S.amount), a=apply(ipo,amount);
+  pdfHeader(doc,W,'IPO Application & Profit Report','QIB APPLICATION DESK  |  PROPORTIONATE ALLOTMENT  |  PROFIT AT X SUBSCRIPTION');
+  let y=38;
+  doc.setTextColor(...C.ink);doc.setFont('helvetica','bold');doc.setFontSize(18);doc.text(ipo.name||'IPO',14,y);
+  const nw=doc.getTextWidth(ipo.name||'IPO');
+  doc.setFillColor(228,247,250);doc.roundedRect(16+nw,y-4.6,doc.getTextWidth(ipo.exch||'')*0.55+8,6,3,3,'F');
+  doc.setFontSize(7.5);doc.setTextColor(14,116,144);doc.text(ipo.exch||'',20+nw,y-0.4);
+  y+=7;doc.setFont('helvetica','normal');doc.setFontSize(8);doc.setTextColor(...C.muted);
+  doc.text(`Price band: Rs. ${ipo.priceLow||ipo.priceHigh} - ${ipo.priceHigh}    Lot: ${num(n(ipo.lot))} shares    Issue size: Rs. ${ipo.issueCr||'-'} Cr    Open: ${dt(ipo.open)}    Close: ${dt(ipo.close)}    Allotment: ${dt(ipo.allot)}    Listing: ${dt(ipo.listing)}`,14,y,{maxWidth:W-28});
+  y+=7;
+  const bw=(W-28-9)/4,bh=23;
+  kpiBox(doc,14,y,bw,bh,'Funds available',rs(amount),'Rs. '+words(amount));
+  kpiBox(doc,14+(bw+3),y,bw,bh,'Max application',rs(a.applied),a.capped?'capped at QIB portion':'at upper band',true);
+  kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Lots / Shares',`${num(a.lots)} / ${num(a.shares)}`,'1 lot = '+rs(a.lotCost));
+  kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Unused balance',rs(a.left),'stays in bank');
+  y+=bh+3;
+  kpiBox(doc,14,y,bw,bh,'GMP per share',rs(a.gmp,2),num(a.gmpPct,2)+'% over issue price');
+  kpiBox(doc,14+(bw+3),y,bw,bh,'Est. listing price',rs(a.listPrice,2),'issue price + GMP');
+  kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Profit if fully allotted',rs(a.maxProfit),'at 1x or below',true);
+  const live=n(ipo.subs)>0?allot(a,ipo.subs,S.round):null;
+  kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Live QIB subscription',live?num(live.x,2)+'x':'-',live?'profit ~ '+rs(live.profit):'not entered');
+  y+=bh+9;
+  doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
+  doc.text(`Expected profit at X subscription  (upper band Rs. ${num(a.price,2)}, GMP Rs. ${num(a.gmp,2)})`,14,y);
+  y+=2;
+  const rows=xs().map(x=>allot(a,x,S.round)); const all=live?[live,...rows]:rows;
+  const max=Math.max(1,...all.map(r=>Math.abs(r.profit)));
+  doc.autoTable({startY:y+1,margin:{left:14,right:14},theme:'plain',
+    head:[['Subscription','Shares allotted','Lots allotted','Allotted value','Refund','Profit @ GMP','Return','']],
+    body:all.map((r,i)=>[(live&&i===0)?num(r.x,2)+'x (live)':num(r.x,2)+'x',num(r.sh),num(r.lots,2),rs(r.amt),rs(r.refund),rs(r.profit),num(r.roi,2)+'%','']),
+    headStyles:{fillColor:C.ink,textColor:255,fontStyle:'bold',fontSize:7.5,halign:'right'},
+    styles:{fontSize:8,cellPadding:{top:2.1,bottom:2.1,left:2.5,right:2.5},halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
+    columnStyles:{0:{halign:'left',fontStyle:'bold'},5:{fontStyle:'bold',textColor:C.gd},7:{cellWidth:30}},
+    alternateRowStyles:{fillColor:[250,252,251]},
+    didParseCell:d=>{if(d.section==='head'&&d.column.index===0)d.cell.styles.halign='left';
+      if(d.section==='body'&&live&&d.row.index===0)d.cell.styles.fillColor=C.amber;
+      if(d.section==='body'&&d.column.index===5&&all[d.row.index].profit<0)d.cell.styles.textColor=[220,38,38];},
+    didDrawCell:d=>{if(d.section==='body'&&d.column.index===7){const r=all[d.row.index];const w=Math.abs(r.profit)/max*(d.cell.width-5);
+      doc.setFillColor(...(r.profit<0?[220,38,38]:C.green));doc.roundedRect(d.cell.x+2,d.cell.y+d.cell.height/2-1.6,Math.max(w,0.6),3.2,1.2,1.2,'F');}}
+  });
+  y=doc.lastAutoTable.finalY+7;
+  if(y>H-50){doc.addPage();y=20}
+  doc.setFillColor(...C.soft);doc.roundedRect(14,y,W-28,30,2.5,2.5,'F');
+  doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor(...C.gd);doc.text('How to read this report',18,y+6);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.6);doc.setTextColor(...C.ink);
+  const lines=[
+    `1. With ${rs(amount)} available, you can apply for ${num(a.lots)} lots (${num(a.shares)} shares) at the upper band of Rs. ${num(a.price,2)} = ${rs(a.applied)}.`,
+    `2. QIB allotment is proportionate: shares allotted = shares applied / subscription (x)${S.round==='exact'?'':', rounded to the '+(S.round==='nearest'?'nearest':'lower')+' lot'}.`,
+    `3. Profit = shares allotted x GMP (Rs. ${num(a.gmp,2)}). The rest of the blocked amount is refunded / unblocked after allotment.`,
+    `4. Example: at ${num(rows[Math.min(3,rows.length-1)].x)}x subscription you get ~${num(rows[Math.min(3,rows.length-1)].sh)} shares and an expected profit of ${rs(rows[Math.min(3,rows.length-1)].profit)}.`
+  ];
+  lines.forEach((l,i)=>doc.text(l,18,y+12+i*4.6,{maxWidth:W-36}));
+  pdfFooter(doc,W,H);
+  doc.save(`${(ipo.name||'IPO').replace(/[^\w]+/g,'_')}_IPO_Report_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+/* ---------- PDF: comparison ---------- */
+function cmpPdf(){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:'mm',format:'a4',orientation:'landscape'});
+  const W=297,H=210; const amount=n(S.amount);
+  const rows=cmpRows().filter(r=>r.ipo.inc); if(!rows.length){alert('Tick at least one IPO');return}
+  pdfHeader(doc,W,'IPO Comparison Report',`FUNDS AVAILABLE: ${rs(amount)} (Rs. ${words(amount).toUpperCase()})  |  ${S.cMode==='own'?'EACH IPO AT ITS OWN LIVE QIB SUBSCRIPTION':'ALL IPOs AT '+num(n(S.cSubs),2)+'x QIB SUBSCRIPTION'}`);
+  const sorted=[...rows].sort((p,q)=>q.r.profit-p.r.profit);
+  const best=sorted[0];
+  const bw=(W-28-9)/4,bh=23,y=34;
+  kpiBox(doc,14,y,bw,bh,'Funds available',rs(amount),'Rs. '+words(amount));
+  kpiBox(doc,14+(bw+3),y,bw,bh,'IPOs compared',String(rows.length),'ranked by expected profit');
+  kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Top pick by profit',best.ipo.name.length>22?best.ipo.name.slice(0,21)+'…':best.ipo.name,'GMP '+num(best.a.gmpPct,2)+'%',true);
+  kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Top expected profit',rs(best.r.profit),'at '+num(best.r.x,2)+'x subscription',true);
+  doc.autoTable({startY:y+bh+6,margin:{left:14,right:14},theme:'plain',
+    head:[['#','IPO','Exchange','Closes','Upper band','Lot','GMP','GMP %','Lots','Shares','Applied','Sub. x','Shares allotted','Allotted value','Profit','Return']],
+    body:sorted.map(({ipo,a,r},i)=>[i+1,ipo.name,ipo.exch,dt(ipo.close),rs(a.price,2),num(a.lot),rs(a.gmp,2),num(a.gmpPct,2)+'%',num(a.lots),num(a.shares),rs(a.applied),num(r.x,2)+'x',num(r.sh),rs(r.amt),rs(r.profit),num(r.roi,2)+'%']),
+    headStyles:{fillColor:C.ink,textColor:255,fontSize:7,fontStyle:'bold',halign:'right'},
+    styles:{fontSize:7.4,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2},cellWidth:'wrap'},
+    columnStyles:{1:{halign:'left',fontStyle:'bold',cellWidth:'auto'},2:{halign:'left'},3:{halign:'left'},14:{fontStyle:'bold',textColor:C.gd}},
+    alternateRowStyles:{fillColor:[250,252,251]},
+    didParseCell:d=>{if(d.section==='head'&&d.column.index<4)d.cell.styles.halign='left';
+      if(d.section==='body'&&d.row.index===0)d.cell.styles.fillColor=C.soft;}
+  });
+  // profit-at-x matrix
+  const xv=xs().slice(0,10);
+  const yy=doc.lastAutoTable.finalY+8;
+  doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(...C.ink);
+  doc.text('Expected profit at X subscription — side by side',14,yy);
+  const mat=sorted.map(({ipo,a})=>[ipo.name,...xv.map(x=>rs(allot(a,x,S.round).profit))]);
+  const colMax=xv.map((x,j)=>Math.max(...sorted.map(s=>allot(s.a,x,S.round).profit)));
+  doc.autoTable({startY:yy+3,margin:{left:14,right:14},theme:'plain',
+    head:[['IPO',...xv.map(x=>num(x)+'x')]],body:mat,
+    headStyles:{fillColor:C.green,textColor:255,fontSize:7,fontStyle:'bold',halign:'right'},
+    styles:{fontSize:7.4,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
+    columnStyles:{0:{halign:'left',fontStyle:'bold'}},
+    didParseCell:d=>{if(d.section==='head'&&d.column.index===0)d.cell.styles.halign='left';
+      if(d.section==='body'&&d.column.index>0){const v=allot(sorted[d.row.index].a,xv[d.column.index-1],S.round).profit;
+        if(v===colMax[d.column.index-1]&&v>0){d.cell.styles.fillColor=C.soft;d.cell.styles.fontStyle='bold';d.cell.styles.textColor=C.gd}}}
+  });
+  pdfFooter(doc,W,H);
+  doc.save(`IPO_Comparison_${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+/* ---------- events ---------- */
+function bind(){
+  $('#today').textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+  $$('.tab').forEach(t=>t.onclick=()=>{$$('.tab').forEach(x=>x.classList.toggle('active',x===t));$$('.view').forEach(v=>v.classList.toggle('active',v.id==='v-'+t.dataset.v));renderAll()});
+  const amtIn=el=>{el.addEventListener('input',()=>{S.amount=n(el.value);save();renderCalc();if(el.id==='cAmount')renderCmpKeep(el)});
+    el.addEventListener('blur',()=>{el.value=num(n(S.amount))})};
+  amtIn($('#amount'));amtIn($('#cAmount'));
+  $('#amount').value=num(n(S.amount));
+  $('#ipoSel').onchange=e=>{S.sel=e.target.value;save();fillForm();renderCalc()};
+  $$('[data-k]').forEach(el=>el.addEventListener('input',()=>{const ipo=cur();if(!ipo)return;
+    ipo[el.dataset.k]=el.type==='number'?(el.value===''?'':n(el.value)):el.value;
+    if(FEED_KEYS.includes(el.dataset.k)){markEdited(ipo,el.dataset.k);$('#resetLive').style.display=liveOf(ipo)?'block':'none'}save();renderCalc();if(el.dataset.k==='name'||el.dataset.k==='priceHigh'||el.dataset.k==='lot')renderSel()}));
+  ['xStart','xStep','xRows'].forEach(k=>{$('#'+k).value=S[k];$('#'+k).addEventListener('input',e=>{S[k]=n(e.target.value);save();renderCalc()})});
+  $('#ptbl').addEventListener('change',e=>{if(!e.target.classList.contains('x'))return;
+    // editing a single x turns the series into explicit values: keep start/step, rebuild by editing start when first row changes
+    const i=+e.target.dataset.i,v=n(e.target.value);
+    if(i===0){S.xStart=v;$('#xStart').value=v}else{S.xStep=(v-n(S.xStart))/i;$('#xStep').value=S.xStep}
+    save();renderCalc()});
+  $$('#roundT button').forEach(b=>b.onclick=()=>{S.round=b.dataset.r;save();renderCalc();renderCmp()});
+  $('#pdfBtn').onclick=ipoPdf;
+  $('#syncBtn').onclick=sync;
+  $('#resetLive').onclick=()=>{const ipo=cur();ipo.edited=[];sync()};
+  $('#cSubs').addEventListener('input',e=>{S.cSubs=n(e.target.value);save();renderCmpKeep(e.target)});
+  $$('#cMode button').forEach(b=>b.onclick=()=>{S.cMode=b.dataset.m;save();renderCmp()});
+  $('#ctbl').addEventListener('change',e=>{const t=e.target;let ipo;
+    if(t.dataset.inc){ipo=S.ipos.find(i=>i.id===t.dataset.inc);ipo.inc=t.checked}
+    if(t.dataset.cg){ipo=S.ipos.find(i=>i.id===t.dataset.cg);ipo.gmp=n(t.value);markEdited(ipo,'gmp')}
+    if(t.dataset.cs){ipo=S.ipos.find(i=>i.id===t.dataset.cs);ipo.subs=n(t.value)}
+    save();renderCmp();fillForm();renderCalc()});
+  $('#cPdf').onclick=cmpPdf;
+  $('#addIpo').onclick=()=>{const t=new Date().toISOString().slice(0,10);
+    const i={id:uid(),inc:true,name:'New IPO',exch:'NSE SME',priceLow:'',priceHigh:100,lot:1200,gmp:0,subs:0,issueCr:'',qibCr:'',open:t,close:'',allot:'',listing:''};
+    S.ipos.unshift(i);S.sel=i.id;save();$$('.tab')[0].click();$('[data-k=name]').select()};
+  $('#listgrid').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.dataset.open){S.sel=b.dataset.open;save();$$('.tab')[0].click()}
+    if(b.dataset.dup){const o=S.ipos.find(i=>i.id===b.dataset.dup);const c={...o,id:uid(),name:o.name+' (copy)'};S.ipos.splice(S.ipos.indexOf(o)+1,0,c);save();renderAll()}
+    if(b.dataset.del){const o=S.ipos.find(i=>i.id===b.dataset.del);if(confirm('Remove '+o.name+'?')){S.ipos=S.ipos.filter(i=>i!==o);if(o.src)S.removed.push(o.src);if(S.sel===o.id)S.sel=S.ipos[0]&&S.ipos[0].id;save();renderAll()}}};
+  $('#expJson').onclick=()=>{const b=new Blob([JSON.stringify(S.ipos,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ipo_list.json';a.click()};
+  $('#impBtn').onclick=()=>$('#impFile').click();
+  $('#impFile').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>{try{const arr=JSON.parse(t);if(!Array.isArray(arr))throw 0;
+    S.ipos=arr.map(i=>({inc:true,...i,id:i.id||uid()}));S.sel=S.ipos[0]&&S.ipos[0].id;save();renderAll()}catch(_){alert('Not a valid IPO list file')}})};
+}
+// re-render compare table without losing focus on the input being typed in
+function renderCmpKeep(){renderCmp()}
+
+load();bind();renderAll();sync();
+</script>
+</body>
+</html>
