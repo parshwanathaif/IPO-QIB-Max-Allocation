@@ -206,7 +206,12 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
         <div class="row3">
           <div class="f"><label>Start (x)</label><input id="xStart" type="number"></div>
           <div class="f"><label>Step (x)</label><input id="xStep" type="number"></div>
-          <div class="f"><label>Rows</label><input id="xRows" type="number"></div>
+          <div class="f"><label>…up to (x)</label><input id="xSwitch" type="number"></div>
+        </div>
+        <div class="row3">
+          <div class="f"><label>Then step (x)</label><input id="xStep2" type="number"></div>
+          <div class="f"><label>…up to (x)</label><input id="xMax" type="number"></div>
+          <div class="f"><label>Rows</label><input id="xCount" disabled></div>
         </div>
         <label>Allotment rounding</label>
         <div class="toggle" id="roundT">
@@ -307,6 +312,7 @@ function load(){
   if(!S||!S.ipos){S={amount:5000000,xStart:25,xStep:25,xRows:12,round:'exact',cSubs:100,cMode:'common',ipos:[],sel:null,fresh:true}}
   S.removed=S.removed||[];
   if(!S.sebi){S.round='auto';S.sebi=1}
+  if(S.xSwitch==null){Object.assign(S,{xStart:25,xStep:25,xSwitch:200,xStep2:10,xMax:300})}
   pickSel();
 }
 function pickSel(){if(!S.sel||!S.ipos.find(i=>i.id===S.sel))S.sel=S.ipos[0]&&S.ipos[0].id}
@@ -394,7 +400,14 @@ function allot(a,x){
     roi:a.applied?profit/a.applied*100:0, listVal:sh*a.listPrice};
 }
 const pct=v=>num(v*100,4)+'%';
-function xs(){const r=[];for(let i=0;i<Math.max(1,n(S.xRows));i++)r.push(n(S.xStart)+i*n(S.xStep));return r}
+// subscription levels: Start, +Step up to Switch (default 25…200 by 25), then +Step2 up to Max (210…300 by 10)
+function xs(){
+  const r=[], s1=Math.max(n(S.xStep),0.01), s2=Math.max(n(S.xStep2),0.01), sw=n(S.xSwitch), mx=Math.max(n(S.xMax),sw);
+  let x=n(S.xStart);
+  for(;x<=sw+1e-9&&r.length<80;x+=s1)r.push(+x.toFixed(4));
+  for(x=(r.length?r[r.length-1]:sw)+s2;x<=mx+1e-9&&r.length<80;x+=s2)r.push(+x.toFixed(4));
+  return r.length?r:[n(S.xStart)];
+}
 
 /* ---------- calculator view ---------- */
 function fillForm(){
@@ -430,15 +443,16 @@ function renderCalc(){
     ${a.over?`Your application of ${inr(a.applied)} is above it by ${inr(a.applied-a.maxQib)}. Figures below are still calculated on your full amount — please verify.`:`Your application is within it.`}</div>`;
   $('#tPrice').textContent=num(a.price,2); $('#tGmp').textContent=num(a.gmp,2);
   const rows=xs().map(x=>allot(a,x));
+  $('#xCount').value=rows.length;
   const live=n(ipo.subs)>0?allot(a,ipo.subs):null;
   const max=Math.max(1,...rows.map(r=>Math.abs(r.profit)),live?Math.abs(live.profit):0);
-  const tr=(r,i,isLive)=>`<tr${isLive?' class="cur"':''}><td>${isLive?num(r.x,2)+'x (live)':`<input class="x" data-i="${i}" value="${r.x}">`}</td>
+  const tr=(r,i,isLive)=>`<tr${isLive?' class="cur"':''}><td>${isLive?num(r.x,2)+'x (live)':`<b>${num(r.x,2)}x</b>`}</td>
     <td>${pct(r.ratio)}</td><td>${num(r.raw,2)}</td>
     <td><b>${num(r.sh)}</b>${r.lottery?`<div class="lot">draw of lots: ${num(r.lottery*100,1)}% chance of 1 lot (≈ ${inr(r.lottery*a.lot*a.gmp)} expected)</div>`:''}</td><td><b>${num(r.lots,2)}</b></td><td>${inr(r.amt)}</td><td>${inr(r.refund)}</td>
     <td><div class="bar"><i style="width:${Math.round(Math.abs(r.profit)/max*90)}px"></i><span class="profit${r.profit<0?' neg':''}">${inr(r.profit)}</span></div></td>
     <td>${num(r.roi,2)}%</td></tr>`;
   $('#ptbl').innerHTML=`<thead><tr><th>Subscription</th><th>Allotment ratio</th><th>Proportionate shares</th><th>Final shares</th><th>Final lots</th><th>Allotted value</th><th>Refund</th><th>Profit @ GMP</th><th>Return on applied</th></tr></thead><tbody>${live?tr(live,-1,true):''}${rows.map((r,i)=>tr(r,i)).join('')}</tbody>`;
-  $('#tNote').textContent=`Applied ${num(a.shares)} shares (${num(a.lots)} lots) for ${inr(a.applied)}. Allotment ratio = (1 − ${num(a.r*100,2)}% MF reserve) ÷ (x − ${num(a.r*100,2)}%). Proportionate shares = shares applied × ratio, then ${rdesc(a)}. Profit = final shares × GMP. Edit any x value in the first column.`;
+  $('#tNote').textContent=`Applied ${num(a.shares)} shares (${num(a.lots)} lots) for ${inr(a.applied)}. Allotment ratio = (1 − ${num(a.r*100,2)}% MF reserve) ÷ (x − ${num(a.r*100,2)}%). Proportionate shares = shares applied × ratio, then ${rdesc(a)}. Profit = final shares × GMP. Change the x levels in Table settings.`;
   renderWorking(ipo,a,live||rows[0]);
   $$('#roundT button').forEach(b=>b.classList.toggle('active',b.dataset.r===S.round));
 }
@@ -743,12 +757,7 @@ function bind(){
   $$('[data-k]').forEach(el=>el.addEventListener('input',()=>{const ipo=cur();if(!ipo)return;
     ipo[el.dataset.k]=el.type==='number'?(el.value===''?'':n(el.value)):el.value;
     if(FEED_KEYS.includes(el.dataset.k)){markEdited(ipo,el.dataset.k);$('#resetLive').style.display=liveOf(ipo)?'block':'none'}save();renderCalc();if(el.dataset.k==='name'||el.dataset.k==='priceHigh'||el.dataset.k==='lot')renderSel()}));
-  ['xStart','xStep','xRows'].forEach(k=>{$('#'+k).value=S[k];$('#'+k).addEventListener('input',e=>{S[k]=n(e.target.value);save();renderCalc()})});
-  $('#ptbl').addEventListener('change',e=>{if(!e.target.classList.contains('x'))return;
-    // editing a single x turns the series into explicit values: keep start/step, rebuild by editing start when first row changes
-    const i=+e.target.dataset.i,v=n(e.target.value);
-    if(i===0){S.xStart=v;$('#xStart').value=v}else{S.xStep=(v-n(S.xStart))/i;$('#xStep').value=S.xStep}
-    save();renderCalc()});
+  ['xStart','xStep','xSwitch','xStep2','xMax'].forEach(k=>{$('#'+k).value=S[k];$('#'+k).addEventListener('input',e=>{S[k]=n(e.target.value);save();renderCalc();renderCmp()})});
   $$('#roundT button').forEach(b=>b.onclick=()=>{S.round=b.dataset.r;save();renderCalc();renderCmp()});
   $('#pdfBtn').onclick=ipoPdf;
   $('#syncBtn').onclick=sync;
