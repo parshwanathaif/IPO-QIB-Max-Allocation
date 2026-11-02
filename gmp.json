@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-02T11:23:53+00:00",
+ "updated": "2026-11-02T12:20:37+00:00",
  "ipos": [
   {
    "src": 1432,
@@ -111,7 +111,7 @@
    "src": 1424,
    "name": "Bombay Coated & Special Steels Ltd",
    "exch": "Mainboard",
-   "status": "open",
+   "status": "closed",
    "priceLow": 78.0,
    "priceHigh": 82.0,
    "lot": 182,
@@ -132,7 +132,7 @@
    "src": 1427,
    "name": "Antala Industries Ltd",
    "exch": "BSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 63.0,
    "priceHigh": 67.0,
    "lot": 2000,
