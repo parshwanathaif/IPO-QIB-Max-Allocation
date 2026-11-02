@@ -21,10 +21,16 @@ try {
     $s = New-Object Microsoft.PowerShell.Commands.WebRequestSession
     Invoke-WebRequest 'https://www.nseindia.com/market-data/all-upcoming-issues-ipo' -WebSession $s -UserAgent $ua -UseBasicParsing | Out-Null
     $h = @{ Referer = 'https://www.nseindia.com/market-data/all-upcoming-issues-ipo'; Accept = 'application/json' }
-    $cur = Invoke-RestMethod 'https://www.nseindia.com/api/ipo-current-issue' -WebSession $s -UserAgent $ua -Headers $h
+    # current issues plus NSE's upcoming lists (mainboard and SME), one entry per symbol
+    $cur = @()
+    foreach ($u in 'ipo-current-issue', 'all-upcoming-issues?category=ipo', 'all-upcoming-issues?category=sme') {
+        try { $r = Invoke-RestMethod "https://www.nseindia.com/api/$u" -WebSession $s -UserAgent $ua -Headers $h; if ($r -is [array]) { $cur += $r } } catch {}
+    }
+    $cur = $cur | Where-Object { $_.symbol } | Sort-Object symbol -Unique
     foreach ($it in $cur) {
         if (-not $it.symbol) { continue }
-        $d = Invoke-RestMethod "https://www.nseindia.com/api/ipo-detail?symbol=$([uri]::EscapeDataString($it.symbol))&series=$($it.series)" -WebSession $s -UserAgent $ua -Headers $h
+        $ser = if ($it.series) { $it.series } else { 'EQ' }
+        try { $d = Invoke-RestMethod "https://www.nseindia.com/api/ipo-detail?symbol=$([uri]::EscapeDataString($it.symbol))&series=$ser" -WebSession $s -UserAgent $ua -Headers $h } catch { continue }
         $row = $d.issueInfo.dataList | Where-Object { $_.title -match 'Maximum Bid Quantity for QIB' } | Select-Object -First 1
         if ($row) {
             $items += [ordered]@{ key = Norm $it.companyName; name = $it.companyName; exchange = 'NSE'; symbol = $it.symbol; maxQibSh = Shares $row.value }
@@ -42,7 +48,10 @@ $items | ForEach-Object { "{0,-4} {1,-45} {2,12:N0}" -f $_.exchange, $_.name, $_
 # rewrite (and publish) only when the figures changed, so the repo doesn't fill with timestamp-only commits
 $path = Join-Path $root 'exchange.json'
 $sig = { param($list) ($list | ForEach-Object { "$($_.key)=$($_.maxQibSh)" } | Sort-Object) -join ';' }
-$old = if (Test-Path $path) { (Get-Content $path -Raw | ConvertFrom-Json).items } else { @() }
+$old = if (Test-Path $path) { @((Get-Content $path -Raw | ConvertFrom-Json).items) } else { @() }
+# keep figures for issues NSE no longer lists (closed / listed) so the app never falls back to the estimate
+$items = @($items) + @($old | Where-Object { $k = $_.key; -not ($items | Where-Object { $_.key -eq $k }) } |
+    ForEach-Object { [ordered]@{ key = $_.key; name = $_.name; exchange = $_.exchange; symbol = $_.symbol; maxQibSh = $_.maxQibSh } } | Select-Object -First 60)
 $changed = $items.Count -and ((& $sig $items) -ne (& $sig $old))
 if ($changed) {
     $out = [ordered]@{ updated = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ss+00:00'); status = $status; items = $items }

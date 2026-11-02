@@ -96,12 +96,20 @@ def main():
     m = re.search(r'ajax:\s*\{\s*url:\s*"([^"]+)"', page)
     if not m:
         sys.exit("ipo data URL not found on page (blocked or layout changed)")
-    url = json.loads('"' + m.group(1) + '"')
-    url += "&" + urllib.parse.urlencode({"draw": 1, "start": 0, "length": 60})
-    data = json.loads(get(url, **{"X-Requested-With": "XMLHttpRequest", "Accept": "application/json", "Referer": HOME}))
+    base = json.loads('"' + m.group(1) + '"')
+    hdr = {"X-Requested-With": "XMLHttpRequest", "Accept": "application/json", "Referer": HOME}
+    # the default list (open + recent) and the site's own "Upcoming" filter, merged by IPO id
+    upcoming = {"all": "true", "eq": "false", "sme": "false", "all_ipos": "false",
+                "upcoming_ipos": "true", "open_ipos": "false", "closed_ipos": "false"}
+    rows = {}
+    for extra in ({}, upcoming):
+        url = base + "&" + urllib.parse.urlencode({"draw": 1, "start": 0, "length": 60, **extra})
+        for d in json.loads(get(url, **hdr)).get("data", []):
+            rows.setdefault(d.get("id"), d)
+    print(f"{len(rows)} rows, statuses: {sorted({d.get('current_status') for d in rows.values()})}")
 
     ipos = []
-    for d in data.get("data", []):
+    for d in rows.values():
         if "Listed" in (d.get("open") or ""):
             continue
         try:

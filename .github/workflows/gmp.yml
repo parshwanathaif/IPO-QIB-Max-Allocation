@@ -2,8 +2,8 @@ name: Update GMP
 
 on:
   schedule:
-    # every 30 min, 09:00-19:30 IST (03:30-14:00 UTC), Mon-Sat
-    - cron: "0,30 4-14 * * 1-6"
+    # every 15 minutes, round the clock, every day (GitHub may start runs a few minutes late)
+    - cron: "*/15 * * * *"
   workflow_dispatch:
   push:
     branches: [main]

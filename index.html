@@ -147,6 +147,8 @@ details.adv summary::-webkit-details-marker{display:none}
 .livecard .t.hot{background:rgba(31,164,99,.18);border-color:rgba(31,164,99,.5)}
 .livecard .t.hot .v{color:#5ee0a0}
 .livecard.none{background:#fff;color:var(--muted);border:1px dashed var(--line);box-shadow:none;font-size:.8rem;padding:12px 16px}
+#stamp .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);margin-right:6px;vertical-align:middle;animation:pulseg 2s infinite}
+@keyframes pulseg{0%{box-shadow:0 0 0 0 rgba(31,164,99,.6)}70%{box-shadow:0 0 0 6px rgba(31,164,99,0)}100%{box-shadow:0 0 0 0 rgba(31,164,99,0)}}
 .qw{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:.76rem;line-height:1.5;background:var(--teal-soft);color:#0e5566;border:1px solid #c9edf3}
 .qw.bad{background:#fef2f2;color:#991b1b;border-color:#fecaca}
 .pickhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px}
@@ -397,6 +399,9 @@ async function sync(){
     else if((f.status==='open'||f.status==='upcoming')&&!S.removed.includes(f.src))
       S.ipos.push({subs:0,qibCr:'',mfCr:'',...Object.fromEntries(FEED_KEYS.filter(k=>k in f).map(k=>[k,f[k]])),src:f.src,status:f.status,id:uid(),inc:true,edited:[]});
   }
+  // IPOs that have dropped out of the feed have listed — clear them so the list stays current (your own manual IPOs stay)
+  const live=new Set(feed.ipos.map(f=>f.src));
+  S.ipos=S.ipos.filter(i=>!i.src||live.has(i.src));
   // exact "Maximum Bid Quantity for QIB" from NSE (exchange.json, pushed by scripts/fetch_exchange.ps1) beats the estimate
   try{
     const ex=await (await fetch('exchange.json?t='+Date.now(),{cache:'no-store'})).json();
@@ -407,7 +412,7 @@ async function sync(){
   }catch(e){}
   S.fresh=false;pickSel();save();
   const t=new Date(feed.updated);
-  $('#stamp').innerHTML=`GMP from <a href="https://www.ipopremium.in/" target="_blank" rel="noopener" style="color:var(--green-dark)">ipopremium.in</a> · updated ${t.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}`;
+  $('#stamp').innerHTML=`<span class="dot"></span>Live data from <a href="https://www.ipopremium.in/" target="_blank" rel="noopener" style="color:var(--green-dark)">ipopremium.in</a> · updated ${t.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})} · auto-refreshing`;
   renderAll();
 }
 // company name -> first two significant words (same rule as scripts/fetch_exchange.ps1)
@@ -458,6 +463,7 @@ function allot(a,x){
     // SME: proportionate entitlement below one lot is decided by draw of lots for one lot
     if(m!=='shFloor'&&sh===0&&raw>0&&a.lot){lottery=raw/a.lot}
   }
+  if(!isFinite(sh))sh=0;  // upcoming IPO with no lot size yet
   const amt=sh*a.price, profit=sh*a.gmp;
   return {x,ratio,raw,simple,sh,lottery,lots:a.lot?sh/a.lot:0,amt,refund:a.applied-amt,profit,
     roi:a.applied?profit/a.applied*100:0, listVal:sh*a.listPrice};
@@ -492,7 +498,7 @@ function fillForm(){
 function markEdited(ipo,k){if(!ipo.src)return;ipo.edited=ipo.edited||[];if(!ipo.edited.includes(k))ipo.edited.push(k)}
 function renderSel(){
   $('#ipoSel').innerHTML=S.ipos.map(i=>`<option value="${i.id}"${i.id===S.sel?' selected':''}>${esc(i.name)} — ₹${i.priceHigh} × ${i.lot}</option>`).join('');
-  $('#ipoPills').innerHTML=S.ipos.map(i=>`<button class="pill${i.id===S.sel?' on':''}" data-pick-ipo="${i.id}"><b>${esc(i.name)}</b><small>${esc(i.exch)} · closes ${dt(i.close)}${n(i.gmp)?` · GMP ₹${i.gmp}`:''}</small></button>`).join('')||'<span class="hint">No IPOs yet — add one in Manage IPOs.</span>';
+  $('#ipoPills').innerHTML=S.ipos.map(i=>`<button class="pill${i.id===S.sel?' on':''}" data-pick-ipo="${i.id}"><b>${esc(i.name)}</b><small>${i.status==='upcoming'?'<span style="color:var(--amber);font-weight:700">UPCOMING</span> · ':''}${esc(i.exch)} · ${i.status==='upcoming'?'opens '+dt(i.open):'closes '+dt(i.close)}${n(i.gmp)?` · GMP ₹${i.gmp}`:''}</small></button>`).join('')||'<span class="hint">No IPOs yet — add one in Manage IPOs.</span>';
 }
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 function renderCalc(){
@@ -510,7 +516,8 @@ function renderCalc(){
   ].map(k=>`<div class="kpi${k[3]?' hl':''}"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
   // one plain-English answer
   const ax=n(ipo.subs)>1?n(ipo.subs):100, aw=allot(a,ax);
-  $('#answer').innerHTML=!a.lots?`Your balance is less than one lot (${inr(a.lotCost)}). Increase the bank balance to apply.`:
+  $('#answer').innerHTML=!a.lotCost?`<div class="a1">Price band / lot size not announced yet</div>This IPO is upcoming — figures fill in automatically once ipopremium publishes the price band and lot. You can also type them under "More IPO details".`:
+    !a.lots?`Your balance is less than one lot (${inr(a.lotCost)}). Increase the bank balance to apply.`:
     `<div class="a1">Apply for ${num(a.lots)} lots (${num(a.shares)} shares) = ${inr(a.applied)}</div>
      At ${n(ipo.subs)>1?"today's":'an assumed'} <b>${num(ax,2)}x</b> QIB subscription you would get about <b>${num(aw.sh)} shares (${num(aw.lots,2)} lots)</b>${aw.lottery?` — below one lot, ${num(aw.lottery*100,1)}% lottery chance`:''},
      an expected profit of <b>${inr(aw.profit)}</b> = <b>${num(aw.roi,2)}%</b> yield on the money blocked. ${inr(aw.refund)} comes back on ${dt(ipo.allot)}.`;
@@ -905,6 +912,11 @@ function bind(){
 function renderCmpKeep(){renderCmp()}
 
 load();bind();renderAll();sync();
+// keep pulling fresh data while the page is open (and as soon as you come back to the tab),
+// but never while you are typing in a box
+const idleSync=()=>{if(!document.hidden&&!(document.activeElement&&document.activeElement.matches('input,select')))sync()};
+setInterval(idleSync,5*60*1000);
+document.addEventListener('visibilitychange',idleSync);
 </script>
 </body>
 </html>
