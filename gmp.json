@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-02T15:52:58+00:00",
+ "updated": "2026-11-02T16:56:12+00:00",
  "ipos": [
   {
    "src": 1432,
@@ -108,6 +108,27 @@
    "maxQibSrc": "ipopremium (estimate)"
   },
   {
+   "src": 1427,
+   "name": "Antala Industries Ltd",
+   "exch": "BSE SME",
+   "status": "open",
+   "priceLow": 62.0,
+   "priceHigh": 66.0,
+   "lot": 2000,
+   "gmp": 0.0,
+   "gmpPct": 0.0,
+   "issueCr": 22.98,
+   "open": "2026-10-29",
+   "close": "2026-11-05",
+   "allot": "2026-11-06",
+   "listing": "2026-11-11",
+   "subs": 66.72,
+   "qibCr": 0.24,
+   "mfCr": "",
+   "maxQibSh": 3306000,
+   "maxQibSrc": "ipopremium (estimate)"
+  },
+  {
    "src": 1424,
    "name": "Bombay Coated & Special Steels Ltd",
    "exch": "Mainboard",
@@ -126,27 +147,6 @@
    "qibCr": 37.43,
    "mfCr": 1.0,
    "maxQibSh": 15726525,
-   "maxQibSrc": "ipopremium (estimate)"
-  },
-  {
-   "src": 1427,
-   "name": "Antala Industries Ltd",
-   "exch": "BSE SME",
-   "status": "closed",
-   "priceLow": 63.0,
-   "priceHigh": 67.0,
-   "lot": 2000,
-   "gmp": 0.0,
-   "gmpPct": 0.0,
-   "issueCr": 23.32,
-   "open": "2026-10-29",
-   "close": "2026-11-02",
-   "allot": "2026-11-03",
-   "listing": "2026-11-05",
-   "subs": 66.72,
-   "qibCr": 0.24,
-   "mfCr": "",
-   "maxQibSh": 3306000,
    "maxQibSrc": "ipopremium (estimate)"
   },
   {
@@ -262,8 +262,8 @@
    "priceLow": 313.0,
    "priceHigh": 330.0,
    "lot": 45,
-   "gmp": 13.5,
-   "gmpPct": 4.09,
+   "gmp": 16.5,
+   "gmpPct": 5.0,
    "issueCr": 667.53,
    "open": "2026-10-27",
    "close": "2026-10-29",
