@@ -647,17 +647,71 @@ function cmpPdf(){
   const sorted=[...rows].sort((p,q)=>q.r.roi-p.r.roi);
   const best=sorted[0], bestProfit=[...rows].sort((p,q)=>q.r.profit-p.r.profit)[0];
   const short=s=>s.length>22?s.slice(0,21)+'…':s;
-  const bw=(W-28-9)/4,bh=23;let y=34;
-  kpiBox(doc,14,y,bw,bh,'Funds available',rs(amount),'Rs. '+words(amount));
-  kpiBox(doc,14+(bw+3),y,bw,bh,'IPOs compared',String(rows.length),'columns ranked by yield');
-  kpiBox(doc,14+(bw+3)*2,y,bw,bh,'Best yield',num(best.r.roi,2)+'%',short(best.ipo.name)+' at '+num(best.r.x,2)+'x',true);
-  kpiBox(doc,14+(bw+3)*3,y,bw,bh,'Highest profit',rs(bestProfit.r.profit),short(bestProfit.ipo.name),true);
-  y+=bh+6;
-  // vertical comparison: metrics down, IPOs across (6 IPOs per block)
+  let y=35;
+  // ---- bird's-eye: one yield card per IPO, ranked best first ----
+  const used=rows.reduce((s,r)=>s+r.a.applied,0), left=amount-used;
+  doc.setFont('helvetica','bold');doc.setFontSize(11);doc.setTextColor(...C.ink);
+  doc.text('Yield at a glance  —  ranked best first',14,y);
+  doc.setFont('helvetica','normal');doc.setFontSize(7.6);doc.setTextColor(...(left<0?[220,38,38]:C.muted));
+  doc.text(`Total blocked ${rs(used)} of ${rs(amount)}  |  ${left<0?'SHORT BY':'remaining'} ${rs(Math.abs(left))}  |  best profit: ${short(bestProfit.ipo.name)} ${rs(bestProfit.r.profit)}`,W-14,y,{align:'right'});
+  y+=4;
+  const perRow=Math.min(sorted.length,6), gap=3, cw=(W-28-gap*(perRow-1))/perRow, ch=40;
+  const maxRoi=Math.max(...sorted.map(r=>r.r.roi),0.0001);
+  sorted.forEach((r,i)=>{
+    const cx=14+(i%perRow)*(cw+gap), cy=y+Math.floor(i/perRow)*(ch+gap), top=i===0&&r.r.roi>0;
+    if(top){doc.setFillColor(...C.soft);doc.setDrawColor(...C.green);doc.setLineWidth(0.6)}else{doc.setFillColor(251,253,252);doc.setDrawColor(...C.line);doc.setLineWidth(0.25)}
+    doc.roundedRect(cx,cy,cw,ch,2.5,2.5,'FD');doc.setLineWidth(0.2);
+    // rank badge + name
+    doc.setFillColor(...(top?C.green:C.ink));doc.circle(cx+5,cy+5.5,2.8,'F');
+    doc.setFont('helvetica','bold');doc.setFontSize(7);doc.setTextColor(255);doc.text('#'+(i+1),cx+5,cy+6.5,{align:'center'});
+    doc.setFontSize(8);doc.setTextColor(...C.ink);
+    doc.text(doc.splitTextToSize(r.ipo.name,cw-12).slice(0,1),cx+9.5,cy+6.6);
+    doc.setFont('helvetica','normal');doc.setFontSize(6.4);doc.setTextColor(...C.muted);
+    doc.text(`${r.ipo.exch}  |  closes ${dt(r.ipo.close)}`,cx+9.5,cy+10);
+    // big yield
+    doc.setFont('helvetica','bold');doc.setFontSize(19);doc.setTextColor(...(top?C.gd:r.r.roi>0?C.ink:C.muted));
+    doc.text(num(r.r.roi,2)+'%',cx+4,cy+20.5);
+    doc.setFont('helvetica','bold');doc.setFontSize(5.8);doc.setTextColor(...C.muted);
+    doc.text(top?'YIELD ON BLOCKED  |  BEST':'YIELD ON BLOCKED',cx+4,cy+24.2);
+    // yield bar relative to the best
+    doc.setFillColor(...C.line);doc.roundedRect(cx+4,cy+26,cw-8,2,1,1,'F');
+    if(r.r.roi>0){doc.setFillColor(...(top?C.green:C.teal));doc.roundedRect(cx+4,cy+26,Math.max((cw-8)*r.r.roi/maxRoi,1),2,1,1,'F')}
+    // key numbers
+    doc.setFont('helvetica','normal');doc.setFontSize(6.6);doc.setTextColor(...C.ink);
+    doc.text(`Profit ${rs(r.r.profit)}`,cx+4,cy+32);
+    doc.text(`${num(r.r.x,2)}x  |  GMP ${num(r.a.gmpPct,1)}%`,cx+cw-4,cy+32,{align:'right'});
+    doc.setTextColor(...C.muted);
+    doc.text(`Blocked ${rs(r.a.applied)}`,cx+4,cy+36.2);
+    doc.text(`${num(r.r.sh)} sh allotted`,cx+cw-4,cy+36.2,{align:'right'});
+  });
+  y+=Math.ceil(sorted.length/perRow)*(ch+gap)+6;
   const metrics=cmpMetrics(), per=6;
+  // yield-at-x matrix: x levels down, IPOs across (first block on page 1 if it fits)
+  const xv=xs();
   for(let k=0;k<sorted.length;k+=per){
     const grp=sorted.slice(k,k+per);
-    if(k>0){doc.addPage();y=20}
+    if(k>0||y>H-28-xv.length*6.2){doc.addPage();y=20}
+    doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
+    doc.text('Yield on amount blocked at X subscription (profit in brackets)',14,y);
+    const cells=xv.map(x=>grp.map(r=>allot(r.a,x)));
+    const rowMax=cells.map(c=>Math.max(...c.map(v=>v.roi)));
+    doc.autoTable({startY:y+3,margin:{left:14,right:14},theme:'plain',
+      head:[['QIB subscription',...grp.map(r=>short(r.ipo.name)+'\nGMP '+rs(r.a.gmp,2)+' ('+num(r.a.gmpPct,2)+'%)')]],
+      body:xv.map((x,i)=>[num(x,2)+'x',...cells[i].map(c=>`${num(c.roi,2)}%  (${rs(c.profit)})`)]),
+      headStyles:{fillColor:C.green,textColor:255,fontSize:7.2,fontStyle:'bold',halign:'right',valign:'top'},
+      styles:{fontSize:7.4,cellPadding:1.5,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
+      columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:32}},alternateRowStyles:{fillColor:[250,252,251]},
+      didParseCell:d=>{if(d.column.index===0&&d.section==='head')d.cell.styles.halign='left';
+        if(d.section==='body'&&d.column.index>0){const v=cells[d.row.index][d.column.index-1].roi;
+          if(v===rowMax[d.row.index]&&v>0){d.cell.styles.fillColor=C.soft;d.cell.styles.fontStyle='bold';d.cell.styles.textColor=C.gd}}}
+    });
+  }
+  // detailed vertical comparison: metrics down, IPOs across (6 IPOs per block), each on its own page
+  for(let k=0;k<sorted.length;k+=per){
+    const grp=sorted.slice(k,k+per);
+    doc.addPage();y=20;
+    doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
+    doc.text('Detailed comparison (SEBI QIB allotment)',14,y);y+=3;
     const body=[],secRows=new Set(),ylRow={i:-1};
     metrics.forEach(m=>{if(m[0]==='§'){secRows.add(body.length);body.push([{content:m[1].replace(' (pre-filled, editable)',' (current x & GMP unless changed)').toUpperCase(),colSpan:grp.length+1}])}
       else{if(m[3]==='yl')ylRow.i=body.length;body.push([m[0].replace('₹','Rs.'),...grp.map(r=>m[2](r))])}});
@@ -671,26 +725,6 @@ function cmpPdf(){
         if(secRows.has(d.row.index)){d.cell.styles.fillColor=[228,247,250];d.cell.styles.textColor=[14,116,144];d.cell.styles.fontSize=6.6;d.cell.styles.fontStyle='bold';d.cell.styles.halign='left'}
         if(d.row.index===ylRow.i){d.cell.styles.fillColor=C.amber;d.cell.styles.fontStyle='bold';d.cell.styles.fontSize=8.6;d.cell.styles.cellPadding=1.6;
           if(d.column.index>0&&grp[d.column.index-1]===best){d.cell.styles.fillColor=C.soft;d.cell.styles.textColor=C.gd}}}
-    });
-  }
-  // yield-at-x matrix: x levels down, IPOs across
-  const xv=xs();
-  for(let k=0;k<sorted.length;k+=per){
-    const grp=sorted.slice(k,k+per);
-    doc.addPage();y=20;
-    doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...C.ink);
-    doc.text('Yield on amount applied at X subscription (profit in brackets)',14,y);
-    const cells=xv.map(x=>grp.map(r=>allot(r.a,x)));
-    const rowMax=cells.map(c=>Math.max(...c.map(v=>v.roi)));
-    doc.autoTable({startY:y+3,margin:{left:14,right:14},theme:'plain',
-      head:[['QIB subscription',...grp.map(r=>short(r.ipo.name)+'\nGMP '+rs(r.a.gmp,2)+' ('+num(r.a.gmpPct,2)+'%)')]],
-      body:xv.map((x,i)=>[num(x,2)+'x',...cells[i].map(c=>`${num(c.roi,2)}%  (${rs(c.profit)})`)]),
-      headStyles:{fillColor:C.green,textColor:255,fontSize:7.4,fontStyle:'bold',halign:'right',valign:'top'},
-      styles:{fontSize:7.6,cellPadding:2,halign:'right',textColor:C.ink,lineColor:C.line,lineWidth:{bottom:0.2}},
-      columnStyles:{0:{halign:'left',fontStyle:'bold',cellWidth:32}},alternateRowStyles:{fillColor:[250,252,251]},
-      didParseCell:d=>{if(d.column.index===0&&d.section==='head')d.cell.styles.halign='left';
-        if(d.section==='body'&&d.column.index>0){const v=cells[d.row.index][d.column.index-1].roi;
-          if(v===rowMax[d.row.index]&&v>0){d.cell.styles.fillColor=C.soft;d.cell.styles.fontStyle='bold';d.cell.styles.textColor=C.gd}}}
     });
   }
   pdfFooter(doc,W,H);
