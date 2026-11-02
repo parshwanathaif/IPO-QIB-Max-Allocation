@@ -82,14 +82,20 @@ input:focus,select:focus{border-color:var(--teal)}
 .vt th,.vt td{text-align:right}
 .vt td:first-child,.vt th:first-child{text-align:left;position:sticky;left:0;z-index:1;background:#fff;min-width:170px;font-weight:600}
 .vt th:first-child{background:var(--ink)}
-.vt th{white-space:normal;min-width:140px;vertical-align:top;text-transform:none;letter-spacing:0;font-size:.78rem}
+.vt th{white-space:normal;min-width:180px;vertical-align:top;text-transform:none;letter-spacing:0;font-size:.78rem}
 .vt th small{display:block;font-weight:500;color:#cbd5d1;font-size:.66rem;margin-top:2px}
 .vt tr.sec td{background:var(--teal-soft)!important;color:#0e7490;font-size:.66rem;text-transform:uppercase;letter-spacing:1.2px;font-weight:700}
 .vt tr.yl td{background:#fff7e6!important;font-size:.95rem;font-weight:800}
 .vt td.best,.vt th.best{box-shadow:inset 0 0 0 2px var(--green)}
 .vt td.best{background:var(--green-soft)!important}
 .vt input.sm{width:100px}
-.vt input.amt{width:130px;font-weight:700}
+.vt input.amt{width:165px;font-weight:700}
+.vt .lot span{text-decoration:underline dotted}
+.budget{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;padding:10px 12px;border-radius:12px;background:var(--teal-soft);border:1px solid #c9edf3;font-size:.8rem}
+.budget.over{background:#fef2f2;border-color:#fecaca}
+.budget b{font-size:.92rem}
+.budget .sep{color:var(--muted)}
+.budget .btns{margin-left:auto}
 .vt input.amt.own{border-color:var(--teal);background:var(--teal-soft)}
 .qw{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:.76rem;line-height:1.5;background:var(--teal-soft);color:#0e5566;border:1px solid #c9edf3}
 .qw.bad{background:#fef2f2;color:#991b1b;border-color:#fecaca}
@@ -251,6 +257,7 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
       <div><button class="btn t" id="cReset" style="width:100%">↺ Reset x &amp; GMP to live</button></div>
       <div><button class="btn g" id="cPdf">⬇ Comparison PDF</button></div>
     </div>
+    <div class="budget" id="budget"></div>
     <div class="pickhead">
       <label style="margin:0">Pick IPOs to compare <span id="pickCount"></span></label>
       <div class="btns"><button class="btn t sm" data-pick="all">All</button><button class="btn t sm" data-pick="open">Open only</button><button class="btn t sm" data-pick="none">Clear</button></div>
@@ -260,7 +267,7 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
   <div class="card">
     <h2>Side-by-side comparison — yield at your x and GMP</h2>
     <div class="tblwrap"><table class="tbl vt" id="ctbl"></table></div>
-    <div class="note">Amount to apply is pre-filled with your bank amount — change it per IPO (clear it to go back to the bank amount). Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted. Only the IPOs you pick above are shown here and in the PDF.</div>
+    <div class="note">Amount to block is pre-filled with your bank balance — change it per IPO when you split your balance across IPOs (clear it to go back to the bank amount); the bar above shows total blocked vs balance. Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted. Only the IPOs you pick above are shown here and in the PDF.</div>
   </div>
   <div class="card">
     <h2>Yield at X subscription — each IPO at its GMP</h2>
@@ -476,10 +483,12 @@ function cmpMetrics(){
     ['Upper price band',r=>inr(r.a.price,2),r=>rs(r.a.price,2)],
     ['Lot size (lot value)',r=>`${num(r.a.lot)} (${inr(r.a.lotCost)})`,r=>`${num(r.a.lot)} (${rs(r.a.lotCost)})`],
     ['§','Your application'],
-    ['Amount to apply (₹)',r=>`<input class="sm amt${r.a.own?' own':''}" inputmode="numeric" data-ca="${r.ipo.id}" value="${num(r.a.budget)}" title="Blank = bank amount">${r.a.own?`<div class="lot" style="color:var(--teal);cursor:pointer" data-careset="${r.ipo.id}">custom · ↺ use bank amount</div>`:''}${r.a.own&&r.a.budget>n(S.amount)?'<div class="lot" style="color:var(--red)">more than bank amount</div>':''}`,r=>rs(r.a.budget)+(r.a.own?' (custom)':'')],
+    ['Amount to block (₹) ✎',r=>`<input class="sm amt${r.a.own?' own':''}" inputmode="numeric" data-ca="${r.ipo.id}" value="${num(r.a.budget)}" title="Blank = bank amount">
+      <div class="lot" style="color:var(--teal);cursor:pointer">${r.a.own?`<span data-careset="${r.ipo.id}">↺ bank amount</span>`:''}${r.a.own&&r.a.maxQib?' · ':''}${r.a.maxQib?`<span data-camax="${r.ipo.id}">use max QIB</span>`:''}</div>
+      ${r.a.budget>n(S.amount)?'<div class="lot" style="color:var(--red)">more than bank balance</div>':''}`,r=>rs(r.a.budget)+(r.a.own?' (custom)':'')],
     ['Lots applied',r=>num(r.a.lots),r=>num(r.a.lots)],
     ['Shares applied',r=>num(r.a.shares),r=>num(r.a.shares)],
-    ['Amount applied (blocked)',r=>`<b>${inr(r.a.applied)}</b>${r.a.over?'<div class="lot" style="color:var(--red)">⚠ above max QIB application</div>':''}`,r=>rs(r.a.applied)+(r.a.over?' (above max QIB!)':'')],
+    ['Actually blocked (whole lots)',r=>`<b>${inr(r.a.applied)}</b>${r.a.over?'<div class="lot" style="color:var(--red)">⚠ above max QIB application</div>':''}`,r=>rs(r.a.applied)+(r.a.over?' (above max QIB!)':'')],
     ['Max QIB application',r=>r.a.maxQib?`${inr(r.a.maxQib)}<div style="font-size:.66rem;color:var(--muted)">${num(r.a.maxQibSh)} sh · ${num(r.a.maxQibLots)} lots · ${esc(r.a.maxQibSrc)}</div>`:'— (not published)',r=>r.a.maxQib?`${rs(r.a.maxQib)} (${num(r.a.maxQibLots)} lots, ${r.a.maxQibSrc})`:'-'],
     ['§','Assumptions (pre-filled, editable)'],
     ['QIB subscription (x)',r=>`<input class="sm" type="number" step="any" data-cs="${r.ipo.id}" value="${n(r.ipo.subs)}">`,r=>num(r.r.x,2)+'x'],
@@ -508,11 +517,18 @@ function renderCmp(){
   $('#cPick').innerHTML=all.map(r=>`<button class="chipbtn${r.ipo.inc?' on':''}" data-inc="${r.ipo.id}"><i>${r.ipo.inc?'✓':''}</i><span>${esc(r.ipo.name)}<br><small>${esc(r.ipo.exch)} · ${num(r.r.x,2)}x · GMP ${num(r.a.gmpPct,1)}% · yield ${num(r.r.roi,2)}%</small></span></button>`).join('');
   const rows=all.filter(r=>r.ipo.inc);
   $('#pickCount').textContent=`(${rows.length} of ${all.length} selected)`;
-  if(!rows.length){$('#ctbl').innerHTML=$('#ytbl').innerHTML=`<tbody><tr><td class="empty">Pick one or more IPOs above to compare.</td></tr></tbody>`;return}
+  if(!rows.length){$('#budget').className='budget';$('#budget').innerHTML='Pick IPOs below to see how much of your balance gets blocked.';$('#ctbl').innerHTML=$('#ytbl').innerHTML=`<tbody><tr><td class="empty">Pick one or more IPOs above to compare.</td></tr></tbody>`;return}
+  // budget across the picked IPOs: what you'd block in total vs the bank balance
+  const bank=n(S.amount), used=rows.reduce((s,r)=>s+r.a.applied,0), left=bank-used;
+  $('#budget').className='budget'+(left<0?' over':'');
+  $('#budget').innerHTML=`<span>Bank balance <b>${inr(bank)}</b></span><span class="sep">−</span><span>Blocked in ${rows.length} picked IPO${rows.length>1?'s':''} <b>${inr(used)}</b></span><span class="sep">=</span><span>${left<0?'⚠ Short by':'Remaining'} <b>${inr(Math.abs(left))}</b></span>
+    <div class="btns"><button class="btn t sm" id="bSplit">Split balance equally</button><button class="btn t sm" id="bReset">All = bank amount</button></div>`;
+  $('#bSplit').onclick=()=>{rows.forEach(r=>r.ipo.applyAmt=Math.floor(bank/rows.length));save();renderCmp()};
+  $('#bReset').onclick=()=>{rows.forEach(r=>r.ipo.applyAmt='');save();renderCmp()};
   const best=Math.max(...rows.map(r=>r.r.roi));
   const isBest=r=>r.r.roi===best&&best>0;
   $('#ctbl').innerHTML=`<thead><tr><th>Metric</th>${rows.map(r=>`<th class="${isBest(r)?'best':''}">${esc(r.ipo.name)}<small>${esc(r.ipo.exch)}${r.ipo.status?' · '+esc(r.ipo.status):''} · rank #${r.rank}</small></th>`).join('')}</tr></thead><tbody>${
-    cmpMetrics().map(m=>m[0]==='§'?`<tr class="sec"><td colspan="${rows.length+1}">${m[1]}</td></tr>`
+    cmpMetrics().map(m=>m[0]==='§'?`<tr class="sec"><td>${m[1]}</td><td colspan="${rows.length}"></td></tr>`
       :`<tr class="${m[3]||''}"><td>${m[0]}</td>${rows.map(r=>`<td class="${m[3]==='yl'&&isBest(r)?'best':''}">${m[1](r)}</td>`).join('')}</tr>`).join('')
   }</tbody>`;
   // yield-at-x matrix: rows = x levels, columns = IPOs
@@ -712,7 +728,12 @@ function bind(){
     if(t.dataset.ca){ipo=S.ipos.find(i=>i.id===t.dataset.ca);const v=t.value.trim();ipo.applyAmt=v===''||n(v)===n(S.amount)?'':n(v)}
     save();renderCmp();fillForm();renderCalc()});
   $('#cPdf').onclick=cmpPdf;
-  $('#ctbl').addEventListener('click',e=>{const b=e.target.closest('[data-careset]');if(!b)return;S.ipos.find(i=>i.id===b.dataset.careset).applyAmt='';save();renderCmp()});
+  $('#ctbl').addEventListener('click',e=>{
+    const b=e.target.closest('[data-careset]'), m=e.target.closest('[data-camax]');
+    if(b){S.ipos.find(i=>i.id===b.dataset.careset).applyAmt=''}
+    else if(m){const ipo=S.ipos.find(i=>i.id===m.dataset.camax);ipo.applyAmt=apply(ipo,0).maxQib}
+    else return;
+    save();renderCmp()});
   $('#ctbl').addEventListener('focusin',e=>{if(e.target.dataset.ca)e.target.select()});
   $('#cPick').onclick=e=>{const b=e.target.closest('[data-inc]');if(!b)return;const ipo=S.ipos.find(i=>i.id===b.dataset.inc);ipo.inc=!ipo.inc;save();renderCmp()};
   $$('[data-pick]').forEach(b=>b.onclick=()=>{const today=new Date().toISOString().slice(0,10);
