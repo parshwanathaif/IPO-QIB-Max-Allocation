@@ -89,6 +89,15 @@ input:focus,select:focus{border-color:var(--teal)}
 .vt td.best,.vt th.best{box-shadow:inset 0 0 0 2px var(--green)}
 .vt td.best{background:var(--green-soft)!important}
 .vt input.sm{width:100px}
+.pickhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 8px}
+.btn.sm{padding:6px 10px;font-size:.72rem}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chipbtn{display:flex;align-items:center;gap:8px;border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:7px 12px;font-family:inherit;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;text-align:left}
+.chipbtn small{font-weight:500;font-size:.68rem}
+.chipbtn i{width:16px;height:16px;border-radius:50%;border:1.5px solid #c5ccc9;display:grid;place-items:center;font-style:normal;font-size:.62rem;flex:none}
+.chipbtn.on{border-color:var(--green);background:var(--green-soft);color:var(--ink)}
+.chipbtn.on i{background:var(--green);border-color:var(--green);color:#fff}
+.empty{padding:28px;text-align:center;color:var(--muted);font-size:.85rem}
 .vt th label{display:inline-flex;gap:4px;align-items:center}
 @media(max-width:600px){.vt td:first-child,.vt th:first-child{min-width:118px}.vt th{min-width:120px}}
 .lot{font-size:.62rem;color:var(--amber);font-weight:700}
@@ -236,11 +245,16 @@ footer{text-align:center;font-size:.7rem;color:var(--muted);padding:20px}
       <div><button class="btn t" id="cReset" style="width:100%">↺ Reset x &amp; GMP to live</button></div>
       <div><button class="btn g" id="cPdf">⬇ Comparison PDF</button></div>
     </div>
+    <div class="pickhead">
+      <label style="margin:0">Pick IPOs to compare <span id="pickCount"></span></label>
+      <div class="btns"><button class="btn t sm" data-pick="all">All</button><button class="btn t sm" data-pick="open">Open only</button><button class="btn t sm" data-pick="none">Clear</button></div>
+    </div>
+    <div class="chips" id="cPick"></div>
   </div>
   <div class="card">
     <h2>Side-by-side comparison — yield at your x and GMP</h2>
     <div class="tblwrap"><table class="tbl vt" id="ctbl"></table></div>
-    <div class="note">Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted; tick IPOs to include them in the PDF.</div>
+    <div class="note">Subscription (x) and GMP are pre-filled with each IPO's current values and are editable (changes save to that IPO). Yield = expected listing profit ÷ amount applied (blocked). Annualised yield assumes funds are blocked from issue close to allotment. Best yield is highlighted. Only the IPOs you pick above are shown here and in the PDF.</div>
   </div>
   <div class="card">
     <h2>Yield at X subscription — each IPO at its GMP</h2>
@@ -465,18 +479,23 @@ function cmpMetrics(){
 function rankRows(rows){[...rows].sort((p,q)=>q.r.roi-p.r.roi).forEach((r,i)=>r.rank=i+1);return rows}
 function renderCmp(){
   if(document.activeElement!==$('#cAmount'))$('#cAmount').value=num(n(S.amount));
-  const rows=rankRows(cmpRows());
-  const best=Math.max(...rows.filter(r=>r.ipo.inc).map(r=>r.r.roi),-Infinity);
-  const isBest=r=>r.ipo.inc&&r.r.roi===best&&best>0;
-  $('#ctbl').innerHTML=`<thead><tr><th>Metric</th>${rows.map(r=>`<th class="${isBest(r)?'best':''}">${esc(r.ipo.name)}<small>${esc(r.ipo.exch)}${r.ipo.status?' · '+esc(r.ipo.status):''}</small><label style="color:#fff;font-weight:500;font-size:.66rem;margin-top:6px"><input type="checkbox" class="chk" data-inc="${r.ipo.id}" ${r.ipo.inc?'checked':''}> in PDF</label></th>`).join('')}</tr></thead><tbody>${
+  // picker: ipo.inc = selected for the dashboard and the PDF
+  const all=rankRows(cmpRows());
+  $('#cPick').innerHTML=all.map(r=>`<button class="chipbtn${r.ipo.inc?' on':''}" data-inc="${r.ipo.id}"><i>${r.ipo.inc?'✓':''}</i><span>${esc(r.ipo.name)}<br><small>${esc(r.ipo.exch)} · ${num(r.r.x,2)}x · GMP ${num(r.a.gmpPct,1)}% · yield ${num(r.r.roi,2)}%</small></span></button>`).join('');
+  const rows=all.filter(r=>r.ipo.inc);
+  $('#pickCount').textContent=`(${rows.length} of ${all.length} selected)`;
+  if(!rows.length){$('#ctbl').innerHTML=$('#ytbl').innerHTML=`<tbody><tr><td class="empty">Pick one or more IPOs above to compare.</td></tr></tbody>`;return}
+  const best=Math.max(...rows.map(r=>r.r.roi));
+  const isBest=r=>r.r.roi===best&&best>0;
+  $('#ctbl').innerHTML=`<thead><tr><th>Metric</th>${rows.map(r=>`<th class="${isBest(r)?'best':''}">${esc(r.ipo.name)}<small>${esc(r.ipo.exch)}${r.ipo.status?' · '+esc(r.ipo.status):''} · rank #${r.rank}</small></th>`).join('')}</tr></thead><tbody>${
     cmpMetrics().map(m=>m[0]==='§'?`<tr class="sec"><td colspan="${rows.length+1}">${m[1]}</td></tr>`
       :`<tr class="${m[3]||''}"><td>${m[0]}</td>${rows.map(r=>`<td class="${m[3]==='yl'&&isBest(r)?'best':''}">${m[1](r)}</td>`).join('')}</tr>`).join('')
   }</tbody>`;
   // yield-at-x matrix: rows = x levels, columns = IPOs
   const xv=xs();
   $('#ytbl').innerHTML=`<thead><tr><th>QIB subscription</th>${rows.map(r=>`<th>${esc(r.ipo.name)}<small>GMP ₹${num(r.a.gmp,2)} (${num(r.a.gmpPct,2)}%)</small></th>`).join('')}</tr></thead><tbody>${
-    xv.map(x=>{const cells=rows.map(r=>allot(r.a,x));const bx=Math.max(...cells.filter((c,i)=>rows[i].ipo.inc).map(c=>c.roi));
-      return `<tr><td>${num(x,2)}x</td>${cells.map((c,i)=>`<td class="${rows[i].ipo.inc&&c.roi===bx&&bx>0?'best':''}"><b>${num(c.roi,2)}%</b><div style="font-size:.66rem;color:var(--muted)">${inr(c.profit)} · ${num(c.sh)} sh</div></td>`).join('')}</tr>`}).join('')
+    xv.map(x=>{const cells=rows.map(r=>allot(r.a,x));const bx=Math.max(...cells.map(c=>c.roi));
+      return `<tr><td>${num(x,2)}x</td>${cells.map((c,i)=>`<td class="${c.roi===bx&&bx>0?'best':''}"><b>${num(c.roi,2)}%</b><div style="font-size:.66rem;color:var(--muted)">${inr(c.profit)} · ${num(c.sh)} sh</div></td>`).join('')}</tr>`}).join('')
   }</tbody>`;
 }
 
@@ -668,6 +687,9 @@ function bind(){
     if(t.dataset.cs){ipo=S.ipos.find(i=>i.id===t.dataset.cs);ipo.subs=n(t.value);markEdited(ipo,'subs')}
     save();renderCmp();fillForm();renderCalc()});
   $('#cPdf').onclick=cmpPdf;
+  $('#cPick').onclick=e=>{const b=e.target.closest('[data-inc]');if(!b)return;const ipo=S.ipos.find(i=>i.id===b.dataset.inc);ipo.inc=!ipo.inc;save();renderCmp()};
+  $$('[data-pick]').forEach(b=>b.onclick=()=>{const today=new Date().toISOString().slice(0,10);
+    S.ipos.forEach(i=>{i.inc=b.dataset.pick==='all'?true:b.dataset.pick==='none'?false:(i.status?i.status==='open':(i.close||'')>=today)});save();renderCmp()});
   $('#addIpo').onclick=()=>{const t=new Date().toISOString().slice(0,10);
     const i={id:uid(),inc:true,name:'New IPO',exch:'NSE SME',priceLow:'',priceHigh:100,lot:1200,gmp:0,subs:0,issueCr:'',qibCr:'',open:t,close:'',allot:'',listing:''};
     S.ipos.unshift(i);S.sel=i.id;save();$$('.tab')[0].click();$('[data-k=name]').select()};
