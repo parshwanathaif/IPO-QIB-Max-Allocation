@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-02T10:28:16+00:00",
+ "updated": "2026-11-02T10:55:50+00:00",
  "ipos": [
   {
    "src": 1432,
@@ -19,7 +19,9 @@
    "listing": "2026-11-09",
    "subs": 0.0,
    "qibCr": 0.64,
-   "mfCr": 0.0
+   "mfCr": 0.0,
+   "maxQibSh": 5725200,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1431,
@@ -38,7 +40,9 @@
    "listing": "2026-11-06",
    "subs": 1.42,
    "qibCr": 10.08,
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 3360000,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1428,
@@ -57,7 +61,9 @@
    "listing": "2026-11-06",
    "subs": 0.99,
    "qibCr": 10.62,
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 1864200,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1430,
@@ -76,7 +82,9 @@
    "listing": "2026-11-06",
    "subs": 0.0,
    "qibCr": 10.79,
-   "mfCr": 0.0
+   "mfCr": 0.0,
+   "maxQibSh": 2401600,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1429,
@@ -95,7 +103,9 @@
    "listing": "2026-11-06",
    "subs": 4.88,
    "qibCr": 6.57,
-   "mfCr": 0.0
+   "mfCr": 0.0,
+   "maxQibSh": 1921200,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1424,
@@ -114,7 +124,9 @@
    "listing": "2026-11-05",
    "subs": 37.32,
    "qibCr": 37.43,
-   "mfCr": 1.0
+   "mfCr": 1.0,
+   "maxQibSh": 15726525,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1427,
@@ -133,7 +145,9 @@
    "listing": "2026-11-05",
    "subs": 66.72,
    "qibCr": 0.24,
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 3306000,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1426,
@@ -152,7 +166,9 @@
    "listing": "2026-11-04",
    "subs": 0,
    "qibCr": "",
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 1779600,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1425,
@@ -171,7 +187,9 @@
    "listing": "2026-11-04",
    "subs": 26.33,
    "qibCr": 5.35,
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 2361600,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1422,
@@ -190,7 +208,9 @@
    "listing": "2026-11-04",
    "subs": 1.84,
    "qibCr": 55.08,
-   "mfCr": 0.02
+   "mfCr": 0.02,
+   "maxQibSh": 11900000,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1423,
@@ -209,7 +229,9 @@
    "listing": "2026-11-03",
    "subs": 2.24,
    "qibCr": 25.01,
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 3776400,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1414,
@@ -228,7 +250,9 @@
    "listing": "2026-11-03",
    "subs": 200.25,
    "qibCr": 51.0,
-   "mfCr": 60.54
+   "mfCr": 60.54,
+   "maxQibSh": 11900000,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1412,
@@ -238,8 +262,8 @@
    "priceLow": 313.0,
    "priceHigh": 330.0,
    "lot": 45,
-   "gmp": 18.0,
-   "gmpPct": 5.45,
+   "gmp": 21.0,
+   "gmpPct": 6.36,
    "issueCr": 667.53,
    "open": "2026-10-27",
    "close": "2026-10-29",
@@ -247,7 +271,9 @@
    "listing": "2026-11-03",
    "subs": 18.81,
    "qibCr": 133.51,
-   "mfCr": 806.0
+   "mfCr": 806.0,
+   "maxQibSh": 14159744,
+   "maxQibSrc": "ipopremium (estimate)"
   }
  ]
 }
