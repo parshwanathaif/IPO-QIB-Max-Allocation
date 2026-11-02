@@ -67,7 +67,10 @@ def qib_details(url):
     for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", table, re.S):
         cells = [text(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
         if len(cells) >= 4:
-            rows[cells[0].upper()] = cells
+            label = cells[0].upper().strip()
+            # pages label rows either "QIB"/"MF" or "QIBs"/"Mutual funds"
+            label = {"QIBS": "QIB", "MUTUAL FUNDS": "MF", "MUTUAL FUND": "MF"}.get(label, label)
+            rows.setdefault(label, cells)
     out = {}
     if "QIB" in rows:
         _, offered, _, times = rows["QIB"][:4]
