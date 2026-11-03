@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-03T10:38:20+00:00",
+ "updated": "2026-11-03T11:34:01+00:00",
  "ipos": [
   {
    "src": 1432,
@@ -27,7 +27,7 @@
    "src": 1431,
    "name": "Vectras Enprocon",
    "exch": "BSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 99.0,
    "priceHigh": 105.0,
    "lot": 1200,
@@ -48,7 +48,7 @@
    "src": 1428,
    "name": "Johnsoncab Electricals Ltd.",
    "exch": "BSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 190.0,
    "priceHigh": 200.0,
    "lot": 600,
@@ -69,7 +69,7 @@
    "src": 1430,
    "name": "Maxwell Engineering Ltd.",
    "exch": "NSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 150.0,
    "priceHigh": 158.0,
    "lot": 800,
@@ -90,7 +90,7 @@
    "src": 1429,
    "name": "HGS (India) Ltd.",
    "exch": "NSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 114.0,
    "priceHigh": 120.0,
    "lot": 1200,
