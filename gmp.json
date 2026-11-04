@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-04T18:18:50+00:00",
+ "updated": "2026-11-04T19:29:18+00:00",
  "ipos": [
   {
    "src": 1432,
@@ -126,27 +126,6 @@
    "qibCr": 0.24,
    "mfCr": "",
    "maxQibSh": 3306000,
-   "maxQibSrc": "ipopremium (estimate)"
-  },
-  {
-   "src": 1424,
-   "name": "Bombay Coated & Special Steels Ltd",
-   "exch": "Mainboard",
-   "status": "closed",
-   "priceLow": 78.0,
-   "priceHigh": 82.0,
-   "lot": 182,
-   "gmp": 8.0,
-   "gmpPct": 9.76,
-   "issueCr": 183.05,
-   "open": "2026-10-29",
-   "close": "2026-11-02",
-   "allot": "2026-11-03",
-   "listing": "2026-11-05",
-   "subs": 37.32,
-   "qibCr": 37.43,
-   "mfCr": 1.0,
-   "maxQibSh": 15726525,
    "maxQibSrc": "ipopremium (estimate)"
   }
  ]
