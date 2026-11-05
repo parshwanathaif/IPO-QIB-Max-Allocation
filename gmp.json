@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-05T10:34:18+00:00",
+ "updated": "2026-11-05T11:36:36+00:00",
  "ipos": [
   {
    "src": 1432,
@@ -111,7 +111,7 @@
    "src": 1427,
    "name": "Antala Industries Ltd",
    "exch": "BSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 62.0,
    "priceHigh": 66.0,
    "lot": 2000,
