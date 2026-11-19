@@ -1,11 +1,11 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-19T11:38:33+00:00",
+ "updated": "2026-11-19T12:45:27+00:00",
  "ipos": [
   {
    "src": 1440,
    "name": "Foodlink F&B Holdings (India) Ltd (MAINBOARD)",
-   "exch": "Tentative Date, Price &amp; Lot",
+   "exch": "Tentative Price &amp; Lot",
    "status": "upcoming",
    "priceLow": 180.0,
    "priceHigh": 191.0,
@@ -13,10 +13,10 @@
    "gmp": 12.0,
    "gmpPct": 6.28,
    "issueCr": 0.0,
-   "open": "2026-11-25",
-   "close": "2026-11-27",
-   "allot": "2026-11-30",
-   "listing": "2026-12-02",
+   "open": "2026-11-26",
+   "close": "2026-11-30",
+   "allot": "2026-12-01",
+   "listing": "2026-12-03",
    "subs": 0,
    "qibCr": "",
    "mfCr": ""
