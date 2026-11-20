@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-20T10:41:52+00:00",
+ "updated": "2026-11-20T11:39:32+00:00",
  "ipos": [
   {
    "src": 1440,
@@ -86,7 +86,7 @@
    "src": 1438,
    "name": "Crystal Crop Protection Ltd",
    "exch": "Mainboard",
-   "status": "open",
+   "status": "closed",
    "priceLow": 259.0,
    "priceHigh": 272.0,
    "lot": 55,
