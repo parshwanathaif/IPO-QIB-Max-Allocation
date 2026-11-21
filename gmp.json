@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-21T07:56:12+00:00",
+ "updated": "2026-11-21T08:47:55+00:00",
  "ipos": [
   {
    "src": 1435,
@@ -88,8 +88,8 @@
    "priceLow": 232.0,
    "priceHigh": 245.0,
    "lot": 600,
-   "gmp": 67.0,
-   "gmpPct": 27.35,
+   "gmp": 65.0,
+   "gmpPct": 26.53,
    "issueCr": 120.09,
    "open": "2026-11-19",
    "close": "2026-11-23",
