@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-23T11:00:04+00:00",
+ "updated": "2026-11-23T11:55:23+00:00",
  "ipos": [
   {
    "src": 1451,
@@ -101,12 +101,12 @@
    "src": 1434,
    "name": "Mahanadi Coalfields",
    "exch": "Mainboard",
-   "status": "open",
+   "status": "closed",
    "priceLow": 129.0,
    "priceHigh": 136.0,
    "lot": 110,
-   "gmp": 0.4,
-   "gmpPct": 0.29,
+   "gmp": 0.2,
+   "gmpPct": 0.15,
    "issueCr": 8981.12,
    "open": "2026-11-19",
    "close": "2026-11-23",
@@ -122,7 +122,7 @@
    "src": 1439,
    "name": "Watrana Rentals Ltd",
    "exch": "NSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 232.0,
    "priceHigh": 245.0,
    "lot": 600,
