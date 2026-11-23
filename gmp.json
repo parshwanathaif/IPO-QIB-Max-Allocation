@@ -1,7 +1,45 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-23T14:32:19+00:00",
+ "updated": "2026-11-23T15:45:26+00:00",
  "ipos": [
+  {
+   "src": 1418,
+   "name": "Milestone Gears Ltd (MAINBOARD)",
+   "exch": "Tentative Date",
+   "status": "upcoming",
+   "priceLow": 0.0,
+   "priceHigh": 0.0,
+   "lot": 0,
+   "gmp": 0.0,
+   "gmpPct": 0,
+   "issueCr": 0.0,
+   "open": "2026-12-04",
+   "close": "2026-12-08",
+   "allot": "2026-12-09",
+   "listing": "2026-12-11",
+   "subs": 0,
+   "qibCr": "",
+   "mfCr": ""
+  },
+  {
+   "src": 1437,
+   "name": "Encube Ethicals  Ltd. (Mainboard)",
+   "exch": "Tentative Date",
+   "status": "upcoming",
+   "priceLow": 0.0,
+   "priceHigh": 0.0,
+   "lot": 0,
+   "gmp": 0.0,
+   "gmpPct": 0,
+   "issueCr": 0.0,
+   "open": "2026-12-03",
+   "close": "2026-12-07",
+   "allot": "2026-12-08",
+   "listing": "2026-12-10",
+   "subs": 0,
+   "qibCr": "",
+   "mfCr": ""
+  },
   {
    "src": 1451,
    "name": "Monomark Engineering (India) Ltd",
@@ -159,25 +197,6 @@
    "mfCr": 91.02,
    "maxQibSh": 11764869,
    "maxQibSrc": "ipopremium (estimate)"
-  },
-  {
-   "src": 1418,
-   "name": "Milestone Gears Ltd",
-   "exch": "Mainboard",
-   "status": "upcoming",
-   "priceLow": 0.0,
-   "priceHigh": 0.0,
-   "lot": 0,
-   "gmp": 0.0,
-   "gmpPct": 0,
-   "issueCr": 0.0,
-   "open": "",
-   "close": "",
-   "allot": "",
-   "listing": "",
-   "subs": 0,
-   "qibCr": "",
-   "mfCr": ""
   }
  ]
 }
