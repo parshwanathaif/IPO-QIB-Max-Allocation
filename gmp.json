@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-23T03:10:58+00:00",
+ "updated": "2026-11-23T04:24:06+00:00",
  "ipos": [
   {
    "src": 1451,
@@ -41,11 +41,30 @@
    "mfCr": ""
   },
   {
+   "src": 1454,
+   "name": "Matangi Rubber Ltd",
+   "exch": "Mainboard",
+   "status": "upcoming",
+   "priceLow": 163.0,
+   "priceHigh": 172.0,
+   "lot": 87,
+   "gmp": 0.0,
+   "gmpPct": 0.0,
+   "issueCr": 125.16,
+   "open": "2026-12-01",
+   "close": "2026-12-03",
+   "allot": "2026-12-04",
+   "listing": "2026-12-08",
+   "subs": 0,
+   "qibCr": "",
+   "mfCr": ""
+  },
+  {
    "src": 1440,
    "name": "Foodlink F&B Holdings (India) Ltd",
    "exch": "Mainboard",
    "status": "upcoming",
-   "priceLow": 180.0,
+   "priceLow": 181.0,
    "priceHigh": 191.0,
    "lot": 78,
    "gmp": 12.0,
