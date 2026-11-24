@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-24T14:28:32+00:00",
+ "updated": "2026-11-24T15:36:07+00:00",
  "ipos": [
   {
    "src": 1418,
@@ -29,7 +29,7 @@
    "priceLow": 0.0,
    "priceHigh": 0.0,
    "lot": 0,
-   "gmp": 0.0,
+   "gmp": 160.0,
    "gmpPct": 0,
    "issueCr": 0.0,
    "open": "2026-12-03",
@@ -124,8 +124,8 @@
    "priceLow": 181.0,
    "priceHigh": 191.0,
    "lot": 78,
-   "gmp": 17.0,
-   "gmpPct": 8.9,
+   "gmp": 20.0,
+   "gmpPct": 10.47,
    "issueCr": 360.76,
    "open": "2026-11-26",
    "close": "2026-11-30",
