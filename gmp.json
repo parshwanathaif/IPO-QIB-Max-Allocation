@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-24T01:59:10+00:00",
+ "updated": "2026-11-24T02:53:53+00:00",
  "ipos": [
   {
    "src": 1418,
@@ -93,6 +93,25 @@
    "close": "2026-12-03",
    "allot": "2026-12-04",
    "listing": "2026-12-08",
+   "subs": 0,
+   "qibCr": "",
+   "mfCr": ""
+  },
+  {
+   "src": 1455,
+   "name": "Airpro Technology India Ltd",
+   "exch": "NSE SME",
+   "status": "upcoming",
+   "priceLow": 99.0,
+   "priceHigh": 99.0,
+   "lot": 1200,
+   "gmp": 0.0,
+   "gmpPct": 0.0,
+   "issueCr": 35.64,
+   "open": "2026-11-27",
+   "close": "2026-12-01",
+   "allot": "2026-12-02",
+   "listing": "2026-12-04",
    "subs": 0,
    "qibCr": "",
    "mfCr": ""
