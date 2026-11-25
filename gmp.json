@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-25T17:45:28+00:00",
+ "updated": "2026-11-25T18:45:50+00:00",
  "ipos": [
   {
    "src": 1418,
@@ -120,7 +120,7 @@
    "src": 1440,
    "name": "Foodlink F&B Holdings (India) Ltd",
    "exch": "Mainboard",
-   "status": "upcoming",
+   "status": "open",
    "priceLow": 181.0,
    "priceHigh": 191.0,
    "lot": 78,
@@ -196,27 +196,6 @@
    "qibCr": 22.93,
    "mfCr": 42.5,
    "maxQibSh": 3264000,
-   "maxQibSrc": "ipopremium (estimate)"
-  },
-  {
-   "src": 1438,
-   "name": "Crystal Crop Protection Ltd",
-   "exch": "Mainboard",
-   "status": "closed",
-   "priceLow": 259.0,
-   "priceHigh": 272.0,
-   "lot": 55,
-   "gmp": 289.0,
-   "gmpPct": 106.25,
-   "issueCr": 455.72,
-   "open": "2026-11-18",
-   "close": "2026-11-20",
-   "allot": "2026-11-23",
-   "listing": "2026-11-26",
-   "subs": 15.81,
-   "qibCr": 90.64,
-   "mfCr": 91.02,
-   "maxQibSh": 11764869,
    "maxQibSrc": "ipopremium (estimate)"
   }
  ]
