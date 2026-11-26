@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-26T21:49:10+00:00",
+ "updated": "2026-11-26T22:50:36+00:00",
  "ipos": [
   {
    "src": 1437,
@@ -45,11 +45,11 @@
    "name": "Swara Baby Products Ltd",
    "exch": "Mainboard",
    "status": "upcoming",
-   "priceLow": 0.0,
-   "priceHigh": 0.0,
-   "lot": 0,
-   "gmp": 0.0,
-   "gmpPct": 0,
+   "priceLow": 105.0,
+   "priceHigh": 111.0,
+   "lot": 135,
+   "gmp": 111.0,
+   "gmpPct": 100.0,
    "issueCr": 800.0,
    "open": "2026-12-02",
    "close": "2026-12-04",
