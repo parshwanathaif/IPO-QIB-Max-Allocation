@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-27T03:33:37+00:00",
+ "updated": "2026-11-27T04:46:51+00:00",
  "ipos": [
   {
    "src": 1437,
@@ -114,7 +114,9 @@
    "listing": "2026-12-04",
    "subs": 0,
    "qibCr": "",
-   "mfCr": ""
+   "mfCr": "",
+   "maxQibSh": 3420000,
+   "maxQibSrc": "ipopremium (estimate)"
   },
   {
    "src": 1440,
