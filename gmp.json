@@ -1,6 +1,6 @@
 {
  "source": "https://www.ipopremium.in/",
- "updated": "2026-11-27T10:51:04+00:00",
+ "updated": "2026-11-27T11:51:43+00:00",
  "ipos": [
   {
    "src": 1456,
@@ -162,7 +162,7 @@
    "src": 1444,
    "name": "Shree Siddhivinayak Greentech Industries Ltd",
    "exch": "NSE SME",
-   "status": "open",
+   "status": "closed",
    "priceLow": 130.0,
    "priceHigh": 142.0,
    "lot": 1000,
